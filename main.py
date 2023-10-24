@@ -4,6 +4,7 @@ import mat73
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import networkx as nx
 
 def split_dataframe(df, chunk_size = 10000):
     chunks = list()
@@ -51,20 +52,87 @@ def assign_spike_values_to_bins(binned_data):
     print(out_df.astype(int))
     return out_df.astype(int)
 
-def simMI():
-    print()
+def simMI(vec1, vec2):
+    dist_vec1 = np.histogram(vec1, bins=2)[0]
+    dist_vec2 = np.histogram(vec2, bins=2)[0]
+    dist_2d = np.histogram2d(vec1, vec2, bins=2)[0]
 
-def compute_conmi():
-    print()
+    print(dist_vec1)
+    print(dist_vec2)
+    print(dist_2d)
+
+    p_vec1_0 = dist_vec1[0]/vec1.size
+    p_vec1_1 = dist_vec1[1]/vec1.size
+    p_vec2_0 = dist_vec2[0]/vec2.size
+    p_vec2_1 = dist_vec2[1]/vec2.size
+
+    p_00 = dist_2d[0][0]/vec1.size
+    p_01 = dist_2d[0][1]/vec1.size
+    p_10 = dist_2d[1][0]/vec1.size
+    p_11 = dist_2d[1][1]/vec1.size
+
+    print(p_vec1_0)
+    print(p_vec1_1)
+    print(p_vec2_0)
+    print(p_vec2_1)
+
+    print(p_00)
+    print(p_01)
+    print(p_10)
+    print(p_11)
+
+    result = p_00*np.log2(p_00/(p_vec1_0*p_vec2_0)) + p_10*np.log2(p_10/(p_vec1_1*p_vec2_0)) + p_01*np.log2(p_01/(p_vec1_0*p_vec2_1)) + p_11*np.log2(p_11/(p_vec1_1*p_vec2_1))
+
+    return result
+
+
+def compute_conmi(vec1, vec2):
+
+    vec = vec2
+
+    for i in range(len(vec1)-1):
+        if vec2[i] == 1 or vec2[i+1] == 1:
+            vec[i] = 1
+        else:
+            vec[i] = 0
+
+    result = simMI(vec1, vec)
+    return result
+
+def create_graph(data):
+
+    data = np.array(data)
+    graph = np.zeros((60, 60))
+
+    for i in range(60):
+        for j in range(60):
+            graph[i][j] = compute_conmi(data[i, :], data[j, :])
+
+    graph[np.isnan(graph)] = 0
+    #graph[corr < 0] = 0
+    np.fill_diagonal(graph, 0)
+
+    return graph
+
+def show_graph_with_labels(adjacency_matrix):
+    G = nx.from_numpy_array(adjacency_matrix, create_using=nx.DiGraph)
+    layout = nx.spring_layout(G)
+    nx.draw(G, layout)
+    nx.draw_networkx_edges(G, pos=layout)
+    plt.show()
 
 def main():
     data_dict = mat73.loadmat('/media/macleanlab/DATA/IMAGING_DATA/caimanoutput_20231019-172438/evaluation/evaluated_IMAGING_DATA_20231020-164721.mat')
     #print(data_dict)
     neural_data = data_dict['neuron']['C']
+    print(neural_data.shape)
     df = create_pandas_df_transpose(neural_data)
     binned_data = bin_data(df)
     spiked_binned_data = assign_spike_values_to_bins(binned_data)
-    plot_data(spiked_binned_data)
+    #plot_data(spiked_binned_data)
+    graph_adjacency_matrix = create_graph(spiked_binned_data)
+    print(graph_adjacency_matrix)
+    show_graph_with_labels(graph_adjacency_matrix)
 
 if __name__ == '__main__':
     main()
