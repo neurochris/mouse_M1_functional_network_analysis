@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import networkx as nx
+import umap
+import plotly.express as px
+
 
 def split_dataframe(df, chunk_size = 10000):
     chunks = list()
@@ -114,12 +117,64 @@ def create_graph(data):
 
     return graph
 
+def compute_graph_centrality(graph):
+    deg_centrality = nx.degree_centrality(graph)
+    print(deg_centrality)
+
+    plt.plot(*zip(*sorted(deg_centrality.items())))
+    plt.title("Degree Centrality")
+    plt.show()
+
+    close_centrality = nx.closeness_centrality(graph)
+    print(close_centrality)
+
+    plt.plot(*zip(*sorted(close_centrality.items())))
+    plt.title("Close Centrality")
+    plt.show()
+
+    bet_centrality = nx.betweenness_centrality(graph, normalized=True, endpoints=False)
+    print(bet_centrality)
+
+    plt.plot(*zip(*sorted(bet_centrality.items())))
+    plt.title("Between Centrality")
+    plt.show()
+
+    pr = nx.pagerank(graph, alpha=0.8)
+    print(pr)
+
+    plt.plot(*zip(*sorted(pr.items())))
+    plt.title("Page Rank")
+    plt.show()
+
+
 def show_graph_with_labels(adjacency_matrix):
     G = nx.from_numpy_array(adjacency_matrix, create_using=nx.DiGraph)
     layout = nx.spring_layout(G)
     nx.draw(G, layout)
     nx.draw_networkx_edges(G, pos=layout)
     plt.show()
+    return G
+
+def compute_umap(data):
+    neural_data = np.array(data)[1:2000, :]
+    print(neural_data.shape)
+
+    umap_2d = umap.UMAP(n_components=2, init='pca', random_state=0)
+    umap_3d = umap.UMAP(n_components=3, init='pca', random_state=0)
+
+    proj_2d = umap_2d.fit_transform(neural_data)
+    proj_3d = umap_3d.fit_transform(neural_data)
+
+    fig_2d = px.scatter(
+        proj_2d, x=0, y=1,
+    )
+    fig_3d = px.scatter_3d(
+        proj_3d, x=0, y=1, z=2,
+    )
+    fig_3d.update_traces(marker_size=5)
+
+    fig_2d.show()
+    fig_3d.show()
 
 def main():
     data_dict = mat73.loadmat('/media/macleanlab/DATA/IMAGING_DATA/caimanoutput_20231019-172438/evaluation/evaluated_IMAGING_DATA_20231020-164721.mat')
@@ -132,7 +187,9 @@ def main():
     #plot_data(spiked_binned_data)
     graph_adjacency_matrix = create_graph(spiked_binned_data)
     print(graph_adjacency_matrix)
-    show_graph_with_labels(graph_adjacency_matrix)
+    graph = show_graph_with_labels(graph_adjacency_matrix)
+    compute_graph_centrality(graph)
+    compute_umap(spiked_binned_data)
 
 if __name__ == '__main__':
     main()
