@@ -10,7 +10,6 @@ class single_unit_analyzer:
 
     def compute_top_central_units(self):
         deg_centrality = nx.degree_centrality(self.graph)
-        print(deg_centrality)
         self.df = pd.DataFrame.from_dict(deg_centrality, orient='index', columns=["Degree"])
 
         new_col_array = []
@@ -18,9 +17,6 @@ class single_unit_analyzer:
             new_col_array.append("Neuron idx " + str(i))
 
         self.df.insert(loc=0, column='Neuron IDX', value=new_col_array)
-
-        print('herehere')
-        print(self.df)
 
         close_centrality = nx.closeness_centrality(self.graph)
         self.df['Closeness'] = self. df.index.to_series().map(close_centrality)
@@ -32,13 +28,10 @@ class single_unit_analyzer:
         pr = nx.pagerank(self.graph, alpha=0.8)
 
         self.df['Page Rank'] = self. df.index.to_series().map(pr)
-        print('herehere')
-        print(self.df)
 
 
     def set_graph(self, graph):
         self.graph = graph
-        print(self.graph)
 
     def get_graph(self):
         return self.graph
