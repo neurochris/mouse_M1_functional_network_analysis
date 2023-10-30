@@ -2,12 +2,14 @@
 
 import mat73
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import numpy as np
 import pandas as pd
 import networkx as nx
 import umap
 import plotly.express as px
 
+import single_unit_analyzer
 
 def split_dataframe(df, chunk_size = 10000):
     chunks = list()
@@ -150,13 +152,27 @@ def compute_graph_centrality(graph):
 def show_graph_with_labels(adjacency_matrix):
     G = nx.from_numpy_array(adjacency_matrix, create_using=nx.DiGraph)
     layout = nx.spring_layout(G)
-    nx.draw(G, layout)
+
+    color_lookup = {k: v for v, k in enumerate(sorted(set(G.nodes())))}
+    low, *_, high = sorted(color_lookup.values())
+    norm = mpl.colors.Normalize(vmin=low, vmax=high, clip=True)
+    mapper = mpl.cm.ScalarMappable(norm=norm, cmap=mpl.cm.coolwarm)
+
+    nx.draw(G, layout, nodelist=color_lookup, node_color=[mapper.to_rgba(i) for i in color_lookup.values()])
     nx.draw_networkx_edges(G, pos=layout)
     plt.show()
+
+    '''
+    threshold = 0.05
+    G.remove_edges_from([(n1, n2) for n1, n2, w in G.edges(data="weight") if w < threshold])
+    nx.draw(G, nodelist=color_lookup, node_color=[mapper.to_rgba(i) for i in color_lookup.values()])
+    plt.show()
+    '''
+
     return G
 
 def compute_umap(data):
-    neural_data = np.array(data)[1:2000, :]
+    neural_data = np.array(data)[1:50, :]
     print(neural_data.shape)
 
     umap_2d = umap.UMAP(n_components=2, init='pca', random_state=0)
@@ -177,19 +193,27 @@ def compute_umap(data):
     fig_3d.show()
 
 def main():
+
+    unit_analyzer = single_unit_analyzer.single_unit_analyzer()
+
     data_dict = mat73.loadmat('/media/macleanlab/DATA/IMAGING_DATA/caimanoutput_20231019-172438/evaluation/evaluated_IMAGING_DATA_20231020-164721.mat')
     #print(data_dict)
     neural_data = data_dict['neuron']['C']
-    print(neural_data.shape)
+    ##print(neural_data.shape)
     df = create_pandas_df_transpose(neural_data)
     binned_data = bin_data(df)
     spiked_binned_data = assign_spike_values_to_bins(binned_data)
     #plot_data(spiked_binned_data)
     graph_adjacency_matrix = create_graph(spiked_binned_data)
-    print(graph_adjacency_matrix)
     graph = show_graph_with_labels(graph_adjacency_matrix)
+
+    unit_analyzer.set_graph(graph)
+    unit_analyzer.compute_top_central_units()
+
+    '''
     compute_graph_centrality(graph)
     compute_umap(spiked_binned_data)
+    '''
 
 if __name__ == '__main__':
     main()
