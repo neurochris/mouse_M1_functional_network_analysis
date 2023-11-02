@@ -21,18 +21,8 @@ def split_dataframe(df, chunk_size = 10000):
 
 ##bin into 10 ms bins and 1 if there is at least one spike in the bin 0 otherwise
 def bin_data(df):
-    df_split = split_dataframe(df, chunk_size=3)
+    df_split = split_dataframe(df, chunk_size=1) ##binning here
     return df_split
-
-def plot_data(data):
-    for idx in range(1, len(data)):
-        if idx%1000 == 0:
-            neural_data = np.array(data.iloc[idx:idx+1])[0]
-            print(neural_data)
-            spike_times = [i for i, x in enumerate(neural_data) if x == 1]
-            fig, ax = plt.subplots()
-            ax.vlines(spike_times, 0, 1)
-            plt.show()
 
 def create_pandas_df_transpose(data):
     #print(data)
@@ -46,14 +36,17 @@ def create_pandas_df(data):
     #print(df.T)
     return df
 
-def assign_spike_values_to_bins(binned_data):
+def assign_spike_values_to_bins(binned_data, sigma, mu):
     out_df = None
+
+    threshold = mu + sigma
+
     for i, chunk in enumerate(binned_data):
         #print(((chunk > 0).any(axis=0)))
         if i == 0:
-            out_df = pd.DataFrame(((chunk > 0).any(axis=0))).transpose()
+            out_df = pd.DataFrame(((chunk > threshold).any(axis=0))).transpose() ##threshold here
         else:
-            out_df.loc[i] = ((chunk > 0).any(axis=0))
+            out_df.loc[i] = ((chunk > threshold).any(axis=0))
     print(out_df.astype(int))
     return out_df.astype(int)
 
@@ -107,13 +100,14 @@ def compute_conmi(vec1, vec2):
 def create_graph(data):
 
     data = np.array(data)
-    graph = np.zeros((60, 60))
+    graph = np.zeros((183, 183))
 
-    for i in range(60):
-        for j in range(60):
+    for i in range(183):
+        for j in range(183):
             graph[i][j] = compute_conmi(data[i, :], data[j, :])
             print('------------------------------')
-            print(graph[i][j])
+            print(data[i, :])
+            print(data[j, :])
             print('------------------------------')
 
     graph[np.isnan(graph)] = 0
@@ -200,15 +194,19 @@ def main():
 
     unit_analyzer = single_unit_analyzer.single_unit_analyzer()
 
-    data_dict = mat73.loadmat('/media/macleanlab/DATA/IMAGING_DATA/caimanoutput_20231019-172438/evaluation/evaluated_IMAGING_DATA_20231020-164721.mat')
+    data_dict = mat73.loadmat('/home/macleanlab/Downloads/evaluation_mouse98_0415/evaluated_mouse98_20220415_20230831-172942.mat')
     #print(data_dict)
     neural_data = data_dict['neuron']['C']
     ##print(neural_data.shape)
     df = create_pandas_df_transpose(neural_data)
     print(df)
+    sigma = np.std(df)
+    mu = np.mean(df)
+    print("sigma and mu")
+    print(sigma[0])
+    print(mu)
     binned_data = bin_data(df)
-    spiked_binned_data = assign_spike_values_to_bins(binned_data)
-    #plot_data(spiked_binned_data)
+    spiked_binned_data = assign_spike_values_to_bins(binned_data, sigma[0], mu)
     graph_adjacency_matrix = create_graph(spiked_binned_data)
     plt.imshow(graph_adjacency_matrix)
     plt.show()
