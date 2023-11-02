@@ -13,7 +13,7 @@ class single_unit_analyzer:
         self.df = pd.DataFrame.from_dict(deg_centrality, orient='index', columns=["Degree"])
 
         new_col_array = []
-        for i in range(60):
+        for i in range(183):
             new_col_array.append("Neuron idx " + str(i))
 
         self.df.insert(loc=0, column='Neuron IDX', value=new_col_array)
