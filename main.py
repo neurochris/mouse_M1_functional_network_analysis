@@ -6,6 +6,7 @@ import matplotlib as mpl
 import numpy as np
 import pandas as pd
 import networkx as nx
+import scipy
 import umap
 import plotly.express as px
 from sklearn.preprocessing import minmax_scale
@@ -104,11 +105,7 @@ def create_graph(data):
 
     for i in range(183):
         for j in range(183):
-            graph[i][j] = compute_conmi(data[i, :], data[j, :])
-            print('------------------------------')
-            print(data[i, :])
-            print(data[j, :])
-            print('------------------------------')
+            graph[i][j] = compute_conmi(data[:, i], data[:, j])
 
     graph[np.isnan(graph)] = 0
     #graph[corr < 0] = 0
@@ -118,28 +115,24 @@ def create_graph(data):
 
 def compute_graph_centrality(graph):
     deg_centrality = nx.degree_centrality(graph)
-    print(deg_centrality)
 
     plt.plot(*zip(*sorted(deg_centrality.items())))
     plt.title("Degree Centrality")
     plt.show()
 
     close_centrality = nx.closeness_centrality(graph)
-    print(close_centrality)
 
     plt.plot(*zip(*sorted(close_centrality.items())))
     plt.title("Close Centrality")
     plt.show()
 
     bet_centrality = nx.betweenness_centrality(graph, normalized=True, endpoints=False)
-    print(bet_centrality)
 
     plt.plot(*zip(*sorted(bet_centrality.items())))
     plt.title("Between Centrality")
     plt.show()
 
     pr = nx.pagerank(graph, alpha=0.8)
-    print(pr)
 
     plt.plot(*zip(*sorted(pr.items())))
     plt.title("Page Rank")
@@ -169,7 +162,7 @@ def show_graph_with_labels(adjacency_matrix):
     return G
 
 def compute_umap(data):
-    neural_data = np.array(data)[1:50, :]
+    neural_data = np.array(data)[:, :]
     print(neural_data)
     print(neural_data)
 
@@ -190,36 +183,93 @@ def compute_umap(data):
     fig_2d.show()
     fig_3d.show()
 
+
+def loop_through_reaches(reaches):
+    for reach in reaches:
+        #print(reach)
+        print('----------------------------------')
+        df = pd.DataFrame(reach)
+        print(df)
+        binned_data = bin_data(df)
+
+        sigma = np.std(df)
+        mu = np.mean(df)
+
+        spiked_binned_data = assign_spike_values_to_bins(binned_data, sigma[0], mu)
+        graph_adjacency_matrix = create_graph(spiked_binned_data)
+        plt.imshow(graph_adjacency_matrix)
+        plt.show()
+
+        graph = show_graph_with_labels(graph_adjacency_matrix)
+
+        compute_graph_centrality(graph)
+        #compute_umap(np.array(df))
+
+def loop_throgh_non_reaches():
+    print()
+
+def subset_reaches(data, masks):
+    return data[np.where(masks != 0)[0], :] ##!= gets all reaches
+
+def subset_non_reaches(data, masks):
+    return data[np.where(masks == 0)[0], :] ##!= gets all reaches
+
+def subset_individual_reaches(data):
+    return data[28648:28662, :]
+
+def subset_reaches_by_frame_start_and_end(data, start_and_end):
+    res_list = []
+    for datum in start_and_end:
+        res2 = data[int(datum[0]):int(datum[1]), :]
+        res_list.append(res2)
+    return res_list
+
 def main():
 
     unit_analyzer = single_unit_analyzer.single_unit_analyzer()
 
     data_dict = mat73.loadmat('/home/macleanlab/Downloads/evaluation_mouse98_0415/evaluated_mouse98_20220415_20230831-172942.mat')
+    reach_masks = pd.read_csv('/home/macleanlab/Downloads/20220415_mouse98_allevents_cam1DLC_processed_reachlogical_30Hz.csv')
+    reach_begin_end_indices = pd.read_csv('/home/macleanlab/Downloads/20220415_mouse98_allevents_cam1DLC_processed_reachindices_30Hz.csv')
+
     #print(data_dict)
     neural_data = data_dict['neuron']['C']
     ##print(neural_data.shape)
     df = create_pandas_df_transpose(neural_data)
-    print(df)
-    sigma = np.std(df)
-    mu = np.mean(df)
-    print("sigma and mu")
-    print(sigma[0])
-    print(mu)
-    binned_data = bin_data(df)
-    spiked_binned_data = assign_spike_values_to_bins(binned_data, sigma[0], mu)
-    graph_adjacency_matrix = create_graph(spiked_binned_data)
-    plt.imshow(graph_adjacency_matrix)
-    plt.show()
 
-    graph = show_graph_with_labels(graph_adjacency_matrix)
+    #df = pd.DataFrame(subset_reaches(np.array(df), reach_masks))
+    #df = pd.DataFrame(subset_individual_reaches(np.array(df)))
+    reach_list = subset_reaches_by_frame_start_and_end(df.to_numpy(), reach_begin_end_indices.to_numpy())
+    loop_through_reaches(reach_list)
 
+    ##print(reach_begin_end_indices)
+    ##print('-----------------------------------------------------------')
+    ##print(df)
+
+    ##print(df)
+    ##sigma = np.std(df)
+    ##mu = np.mean(df)
+    ##print("sigma and mu")
+    ##print(sigma[0])
+    ##print(mu)
+
+    ##print(scipy.ndimage.gaussian_filter1d(df, 1))
+
+    ##binned_data = bin_data(df)
+    ##spiked_binned_data = assign_spike_values_to_bins(binned_data, sigma[0], mu)
+    ##graph_adjacency_matrix = create_graph(spiked_binned_data)
+    ##plt.imshow(graph_adjacency_matrix)
+    ##plt.show()
+
+    ##graph = show_graph_with_labels(graph_adjacency_matrix)
+
+    '''
     unit_analyzer.set_graph(graph)
     unit_analyzer.compute_top_central_units()
-
-
-    compute_graph_centrality(graph)
-    compute_umap(spiked_binned_data)
-    print(graph_adjacency_matrix)
+    print(graph)
+    '''
+    ##compute_graph_centrality(graph)
+    ##compute_umap(np.array(df))
 
 
 if __name__ == '__main__':
