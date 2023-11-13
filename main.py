@@ -6,11 +6,10 @@ import matplotlib as mpl
 import numpy as np
 import pandas as pd
 import networkx as nx
-import scipy
 import umap
 import plotly.express as px
-from sklearn.preprocessing import minmax_scale
 import single_unit_analyzer
+from sklearn.linear_model import LinearRegression
 
 def split_dataframe(df, chunk_size = 10000):
     chunks = list()
@@ -48,7 +47,6 @@ def assign_spike_values_to_bins(binned_data, sigma, mu):
             out_df = pd.DataFrame(((chunk > threshold).any(axis=0))).transpose() ##threshold here
         else:
             out_df.loc[i] = ((chunk > threshold).any(axis=0))
-    print(out_df.astype(int))
     return out_df.astype(int)
 
 def simMI(vec1, vec2):
@@ -111,35 +109,39 @@ def create_graph(data):
     #graph[corr < 0] = 0
     np.fill_diagonal(graph, 0)
 
+
     return graph
 
 def compute_graph_centrality(graph):
     deg_centrality = nx.degree_centrality(graph)
 
-    plt.plot(*zip(*sorted(deg_centrality.items())))
-    plt.title("Degree Centrality")
-    plt.show()
+    #plt.plot(*zip(*sorted(deg_centrality.items())))
+    #plt.title("Degree Centrality")
+    #plt.show()
 
     close_centrality = nx.closeness_centrality(graph)
 
-    plt.plot(*zip(*sorted(close_centrality.items())))
-    plt.title("Close Centrality")
-    plt.show()
+
+    #plt.plot(*zip(*sorted(close_centrality.items())))
+    #plt.title("Close Centrality")
+    #plt.show()
 
     bet_centrality = nx.betweenness_centrality(graph, normalized=True, endpoints=False)
 
-    plt.plot(*zip(*sorted(bet_centrality.items())))
-    plt.title("Between Centrality")
-    plt.show()
+    #plt.plot(*zip(*sorted(bet_centrality.items())))
+    #plt.title("Between Centrality")
+    #plt.show()
 
     pr = nx.pagerank(graph, alpha=0.8)
 
-    plt.plot(*zip(*sorted(pr.items())))
-    plt.title("Page Rank")
-    plt.show()
+    #plt.plot(*zip(*sorted(pr.items())))
+    #plt.title("Page Rank")
+    #plt.show()
+
+    return deg_centrality
 
 
-def show_graph_with_labels(adjacency_matrix):
+def show_graph_with_labels(adjacency_matrix, counter):
     G = nx.from_numpy_array(adjacency_matrix, create_using=nx.DiGraph)
     layout = nx.spring_layout(G)
 
@@ -150,6 +152,11 @@ def show_graph_with_labels(adjacency_matrix):
 
     nx.draw(G, layout, nodelist=color_lookup, node_color=[mapper.to_rgba(i) for i in color_lookup.values()])
     nx.draw_networkx_edges(G, pos=layout)
+
+    prefix = '/home/macleanlab/Desktop/chris_data_out/'
+    save_path = prefix + 'graphs/' + str(counter) + '.png'
+
+    plt.savefig(fname=save_path, format='png')
     plt.show()
 
     '''
@@ -161,7 +168,7 @@ def show_graph_with_labels(adjacency_matrix):
 
     return G
 
-def compute_umap(data):
+def compute_umap(data, counter):
     neural_data = np.array(data)[:, :]
     print(neural_data)
     print(neural_data)
@@ -169,23 +176,33 @@ def compute_umap(data):
     umap_2d = umap.UMAP(n_components=2, init='pca', random_state=0)
     umap_3d = umap.UMAP(n_components=3, init='pca', random_state=0)
 
-    proj_2d = umap_2d.fit_transform(neural_data)
-    proj_3d = umap_3d.fit_transform(neural_data)
+    try:
+        proj_2d = umap_2d.fit_transform(neural_data)
+        proj_3d = umap_3d.fit_transform(neural_data)
 
-    fig_2d = px.scatter(
-        proj_2d, x=0, y=1,
-    )
-    fig_3d = px.scatter_3d(
-        proj_3d, x=0, y=1, z=2,
-    )
-    fig_3d.update_traces(marker_size=5)
+        fig_2d = px.scatter(
+            proj_2d, x=0, y=1,
+        )
+        fig_3d = px.scatter_3d(
+            proj_3d, x=0, y=1, z=2,
+        )
+        fig_3d.update_traces(marker_size=5)
 
-    fig_2d.show()
-    fig_3d.show()
+        prefix = '/home/macleanlab/Desktop/chris_data_out/'
+        filename_2d = prefix + '2d/' + str(counter) + '.png'
+        filename_3d = prefix + '3d/' + str(counter) + '.png'
+        fig_2d.write_image(file=filename_2d, format='png')
+        fig_3d.write_image(file=filename_3d, format='png')
+    except Exception as e:
+        print(e)
+        pass
+
+
 
 
 def loop_through_reaches(reaches):
-    for reach in reaches:
+    dc_df = None
+    for idx, reach in enumerate(reaches):
         #print(reach)
         print('----------------------------------')
         df = pd.DataFrame(reach)
@@ -197,13 +214,25 @@ def loop_through_reaches(reaches):
 
         spiked_binned_data = assign_spike_values_to_bins(binned_data, sigma[0], mu)
         graph_adjacency_matrix = create_graph(spiked_binned_data)
-        plt.imshow(graph_adjacency_matrix)
-        plt.show()
+        #plt.imshow(graph_adjacency_matrix)
+        #plt.show()
 
-        graph = show_graph_with_labels(graph_adjacency_matrix)
+        graph = show_graph_with_labels(graph_adjacency_matrix, idx)
 
-        compute_graph_centrality(graph)
-        #compute_umap(np.array(df))
+        dc = compute_graph_centrality(graph)
+
+        if idx == 0:
+            dc_df = pd.DataFrame.from_dict(dc, orient='index')
+            dc_df = dc_df.rename(columns={0: 'reach 0'})
+        else:
+            dc_df["reach" + str(idx)] = pd.Series(dc)
+        print("dc: ")
+        print(dc)
+        print('-------------------------------')
+        print(dc_df)
+        print('-------------------------------')
+        dc_df.to_csv('/home/macleanlab/Desktop/chris_data_out/centrality_csv/'+str(idx)+'.csv')
+        compute_umap(np.array(df), idx)
 
 def loop_throgh_non_reaches():
     print()
@@ -224,6 +253,67 @@ def subset_reaches_by_frame_start_and_end(data, start_and_end):
         res_list.append(res2)
     return res_list
 
+def background(reexpress_graph):
+    """Return the background graph from a reexpress graph."""
+
+    background = np.copy(reexpress_graph)
+    neurons = np.arange(0, np.shape(reexpress_graph)[0])
+
+    for pre in neurons:
+        for post in neurons:
+            if pre != post:
+                mean1 = np.mean(reexpress_graph[pre, neurons[neurons != post]])
+                mean2 = np.mean(reexpress_graph[neurons[neurons != pre], post])
+                background[pre, post] =  mean1 * mean2
+
+    return background
+
+def residual(background_graph, graph):
+    """Calculate the residual."""
+
+    residual = np.copy(graph)
+
+    neurons = np.shape(graph)[0]
+
+    lm = LinearRegression()
+
+    # b,m = linreg(background_graph[:],graph[:])
+
+    model = lm.fit(background_graph.reshape(-1, 1), graph.reshape(-1))
+
+    b = model.intercept_
+
+    m = model.coef_
+
+    residual = graph - (m * background_graph + b)
+
+    return residual
+
+
+
+def normed_residual(graph):
+
+    """Calculate the normalized residual."""
+
+    norm_residual = np.copy(graph)
+
+    neurons = np.arange(0, np.shape(graph)[0])
+
+    for pre in neurons:
+
+        for post in neurons:
+
+            if pre != post:
+
+                norm_residual[pre, post] = np.std(graph[pre, neurons[neurons != post]]
+                ) * np.std(graph[neurons[neurons != pre], post])
+
+    cutoff = np.median(norm_residual)
+    neurons = np.shape(graph)[0]
+    norm_residual = 1/(np.sqrt(np.maximum(norm_residual, np.ones([neurons, neurons]) * cutoff)))
+
+    return norm_residual * graph
+
 def main():
 
     unit_analyzer = single_unit_analyzer.single_unit_analyzer()
@@ -236,11 +326,24 @@ def main():
     neural_data = data_dict['neuron']['C']
     ##print(neural_data.shape)
     df = create_pandas_df_transpose(neural_data)
+    binned_data = bin_data(df)
+
+    sigma = np.std(df)
+    mu = np.mean(df)
+
+    spiked_binned_data = assign_spike_values_to_bins(binned_data, sigma[0], mu)
+    graph_adjacency_matrix = create_graph(spiked_binned_data)
+
+    background_graph = background(graph_adjacency_matrix)
+    residual_graph = residual(background_graph, graph_adjacency_matrix)
+    normed_graph = normed_residual(residual_graph)
+    plt.imshow(normed_graph)
+    plt.show()
 
     #df = pd.DataFrame(subset_reaches(np.array(df), reach_masks))
     #df = pd.DataFrame(subset_individual_reaches(np.array(df)))
-    reach_list = subset_reaches_by_frame_start_and_end(df.to_numpy(), reach_begin_end_indices.to_numpy())
-    loop_through_reaches(reach_list)
+    #reach_list = subset_reaches_by_frame_start_and_end(df.to_numpy(), reach_begin_end_indices.to_numpy())
+    #loop_through_reaches(reach_list)
 
     ##print(reach_begin_end_indices)
     ##print('-----------------------------------------------------------')
