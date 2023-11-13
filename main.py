@@ -54,10 +54,6 @@ def simMI(vec1, vec2):
     dist_vec2 = np.histogram(vec2, bins=2)[0]
     dist_2d = np.histogram2d(vec1, vec2, bins=2)[0]
 
-    print(dist_vec1)
-    print(dist_vec2)
-    print(dist_2d)
-
     p_vec1_0 = dist_vec1[0]/vec1.size
     p_vec1_1 = dist_vec1[1]/vec1.size
     p_vec2_0 = dist_vec2[0]/vec2.size
@@ -67,16 +63,6 @@ def simMI(vec1, vec2):
     p_01 = dist_2d[0][1]/vec1.size
     p_10 = dist_2d[1][0]/vec1.size
     p_11 = dist_2d[1][1]/vec1.size
-
-    print(p_vec1_0)
-    print(p_vec1_1)
-    print(p_vec2_0)
-    print(p_vec2_1)
-
-    print(p_00)
-    print(p_01)
-    print(p_10)
-    print(p_11)
 
     result = p_00*np.log2(p_00/(p_vec1_0*p_vec2_0)) + p_10*np.log2(p_10/(p_vec1_1*p_vec2_0)) + p_01*np.log2(p_01/(p_vec1_0*p_vec2_1)) + p_11*np.log2(p_11/(p_vec1_1*p_vec2_1))
 
@@ -168,7 +154,7 @@ def show_graph_with_labels(adjacency_matrix, counter):
 
     return G
 
-def compute_umap(data, counter):
+def compute_umap(data, counter=0):
     neural_data = np.array(data)[:, :]
     print(neural_data)
     print(neural_data)
@@ -255,7 +241,6 @@ def subset_reaches_by_frame_start_and_end(data, start_and_end):
 
 def background(reexpress_graph):
     """Return the background graph from a reexpress graph."""
-
     background = np.copy(reexpress_graph)
     neurons = np.arange(0, np.shape(reexpress_graph)[0])
 
@@ -270,48 +255,32 @@ def background(reexpress_graph):
 
 def residual(background_graph, graph):
     """Calculate the residual."""
-
     residual = np.copy(graph)
-
     neurons = np.shape(graph)[0]
-
     lm = LinearRegression()
-
     # b,m = linreg(background_graph[:],graph[:])
-
     model = lm.fit(background_graph.reshape(-1, 1), graph.reshape(-1))
-
     b = model.intercept_
-
     m = model.coef_
-
     residual = graph - (m * background_graph + b)
-
     return residual
 
 
 
 def normed_residual(graph):
-
     """Calculate the normalized residual."""
-
     norm_residual = np.copy(graph)
-
     neurons = np.arange(0, np.shape(graph)[0])
 
     for pre in neurons:
-
         for post in neurons:
-
             if pre != post:
-
                 norm_residual[pre, post] = np.std(graph[pre, neurons[neurons != post]]
                 ) * np.std(graph[neurons[neurons != pre], post])
 
     cutoff = np.median(norm_residual)
     neurons = np.shape(graph)[0]
     norm_residual = 1/(np.sqrt(np.maximum(norm_residual, np.ones([neurons, neurons]) * cutoff)))
-
     return norm_residual * graph
 
 def main():
@@ -364,15 +333,15 @@ def main():
     ##plt.imshow(graph_adjacency_matrix)
     ##plt.show()
 
-    ##graph = show_graph_with_labels(graph_adjacency_matrix)
+    graph = show_graph_with_labels(normed_graph)
 
     '''
     unit_analyzer.set_graph(graph)
     unit_analyzer.compute_top_central_units()
     print(graph)
     '''
-    ##compute_graph_centrality(graph)
-    ##compute_umap(np.array(df))
+    compute_graph_centrality(normed_graph)
+    compute_umap(normed_graph)
 
 
 if __name__ == '__main__':
