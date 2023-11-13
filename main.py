@@ -8,7 +8,7 @@ import pandas as pd
 import networkx as nx
 import umap
 import plotly.express as px
-import single_unit_analyzer
+#import single_unit_analyzer
 from sklearn.linear_model import LinearRegression
 
 def split_dataframe(df, chunk_size = 10000):
@@ -118,11 +118,11 @@ def compute_graph_centrality(graph):
     plt.title("Between Centrality")
     plt.show()
 
-    pr = nx.pagerank(graph, alpha=0.8)
+    #pr = nx.pagerank(graph, alpha=0.8)
 
-    plt.plot(*zip(*sorted(pr.items())))
-    plt.title("Page Rank")
-    plt.show()
+    #plt.plot(*zip(*sorted(pr.items())))
+    #plt.title("Page Rank")
+    #plt.show()
 
     return deg_centrality
 
@@ -140,6 +140,7 @@ def show_graph_with_labels(adjacency_matrix, counter=0):
     mapper = mpl.cm.ScalarMappable(norm=norm, cmap=mpl.cm.coolwarm)
 
     nx.draw(G, layout, nodelist=color_lookup, node_color=[mapper.to_rgba(i) for i in color_lookup.values()])
+
     nx.draw_networkx_edges(G, pos=layout)
 
     prefix = '/home/macleanlab/Desktop/chris_data_out/'
@@ -200,10 +201,13 @@ def loop_through_reaches(reaches):
 
         spiked_binned_data = assign_spike_values_to_bins(binned_data, sigma[0], mu)
         graph_adjacency_matrix = create_graph(spiked_binned_data)
+        background_graph = background(graph_adjacency_matrix)
+        residual_graph = residual(background_graph, graph_adjacency_matrix)
+        normed_graph = normed_residual(residual_graph)
         #plt.imshow(graph_adjacency_matrix)
         #plt.show()
 
-        graph = show_graph_with_labels(graph_adjacency_matrix, idx)
+        graph = show_graph_with_labels(normed_graph, idx)
 
         dc = compute_graph_centrality(graph)
 
@@ -283,11 +287,38 @@ def normed_residual(graph):
     norm_residual = 1/(np.sqrt(np.maximum(norm_residual, np.ones([neurons, neurons]) * cutoff)))
     return norm_residual * graph
 
+def find_subgraph(Gg):
+    # make an undirected copy of the digraph
+    UG = Gg.to_undirected()
+
+    # extract subgraphs
+    A=list(UG.subgraph(c) for c in nx.connected_components(UG))
+    counter = 0
+    for sg in A:
+        plt.figure()
+        G = sg
+        layout = nx.spring_layout(G)
+
+        color_lookup = {k: v for v, k in enumerate(sorted(set(G.nodes())))}
+        low, *_, high = sorted(color_lookup.values())
+        norm = mpl.colors.Normalize(vmin=low, vmax=high, clip=True)
+        mapper = mpl.cm.ScalarMappable(norm=norm, cmap=mpl.cm.coolwarm)
+
+        nx.draw(G, layout, nodelist=color_lookup, node_color=[mapper.to_rgba(i) for i in color_lookup.values()])
+
+        nx.draw_networkx_edges(G, pos=layout)
+
+        prefix = '/home/macleanlab/Desktop/chris_data_out/'
+        save_path = prefix + 'graphs/' + str(counter) + '.png'
+        counter = counter + 1
+        # plt.savefig(fname=save_path, format='png')
+        plt.show()
+
 def main():
 
-    load = False
+    load = True
 
-    unit_analyzer = single_unit_analyzer.single_unit_analyzer()
+    #unit_analyzer = single_unit_analyzer.single_unit_analyzer()
 
     data_dict = mat73.loadmat('/home/macleanlab/Downloads/evaluation_mouse98_0415/evaluated_mouse98_20220415_20230831-172942.mat')
     reach_masks = pd.read_csv('/home/macleanlab/Downloads/20220415_mouse98_allevents_cam1DLC_processed_reachlogical_30Hz.csv')
@@ -315,6 +346,7 @@ def main():
         np.save("/home/macleanlab/Desktop/chris_data_out/numpy/normed_graph.npy", normed_graph)
     else:
         normed_graph = np.load("/home/macleanlab/Desktop/chris_data_out/numpy/normed_graph.npy")
+        print('normed graph loaded from numpy array!')
 
     #df = pd.DataFrame(subset_reaches(np.array(df), reach_masks))
     #df = pd.DataFrame(subset_individual_reaches(np.array(df)))
@@ -341,12 +373,13 @@ def main():
     ##plt.show()
 
     graph = show_graph_with_labels(normed_graph)
-
+    #find_subgraph(graph)
     '''
     unit_analyzer.set_graph(graph)
     unit_analyzer.compute_top_central_units()
     print(graph)
     '''
+
     compute_graph_centrality(graph)
     compute_umap(normed_graph)
 
