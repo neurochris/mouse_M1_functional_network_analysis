@@ -101,33 +101,36 @@ def create_graph(data):
 def compute_graph_centrality(graph):
     deg_centrality = nx.degree_centrality(graph)
 
-    #plt.plot(*zip(*sorted(deg_centrality.items())))
-    #plt.title("Degree Centrality")
-    #plt.show()
+    plt.plot(*zip(*sorted(deg_centrality.items())))
+    plt.title("Degree Centrality")
+    plt.show()
 
     close_centrality = nx.closeness_centrality(graph)
 
 
-    #plt.plot(*zip(*sorted(close_centrality.items())))
-    #plt.title("Close Centrality")
-    #plt.show()
+    plt.plot(*zip(*sorted(close_centrality.items())))
+    plt.title("Close Centrality")
+    plt.show()
 
     bet_centrality = nx.betweenness_centrality(graph, normalized=True, endpoints=False)
 
-    #plt.plot(*zip(*sorted(bet_centrality.items())))
-    #plt.title("Between Centrality")
-    #plt.show()
+    plt.plot(*zip(*sorted(bet_centrality.items())))
+    plt.title("Between Centrality")
+    plt.show()
 
     pr = nx.pagerank(graph, alpha=0.8)
 
-    #plt.plot(*zip(*sorted(pr.items())))
-    #plt.title("Page Rank")
-    #plt.show()
+    plt.plot(*zip(*sorted(pr.items())))
+    plt.title("Page Rank")
+    plt.show()
 
     return deg_centrality
 
 
-def show_graph_with_labels(adjacency_matrix, counter):
+def show_graph_with_labels(adjacency_matrix, counter=0):
+
+    upper_quartile = False
+
     G = nx.from_numpy_array(adjacency_matrix, create_using=nx.DiGraph)
     layout = nx.spring_layout(G)
 
@@ -145,12 +148,12 @@ def show_graph_with_labels(adjacency_matrix, counter):
     plt.savefig(fname=save_path, format='png')
     plt.show()
 
-    '''
-    threshold = 0.25
-    G.remove_edges_from([(n1, n2) for n1, n2, w in G.edges(data="weight") if abs(w) < threshold])
-    nx.draw(G, nodelist=color_lookup, node_color=[mapper.to_rgba(i) for i in color_lookup.values()])
-    plt.show()
-    '''
+    if upper_quartile == True:
+        threshold = np.percentile(adjacency_matrix.flatten(), 75)
+        G.remove_edges_from([(n1, n2) for n1, n2, w in G.edges(data="weight") if abs(w) < threshold])
+        nx.draw(G, nodelist=color_lookup, node_color=[mapper.to_rgba(i) for i in color_lookup.values()])
+        plt.show()
+
 
     return G
 
@@ -182,9 +185,6 @@ def compute_umap(data, counter=0):
     except Exception as e:
         print(e)
         pass
-
-
-
 
 def loop_through_reaches(reaches):
     dc_df = None
@@ -285,29 +285,36 @@ def normed_residual(graph):
 
 def main():
 
+    load = False
+
     unit_analyzer = single_unit_analyzer.single_unit_analyzer()
 
     data_dict = mat73.loadmat('/home/macleanlab/Downloads/evaluation_mouse98_0415/evaluated_mouse98_20220415_20230831-172942.mat')
     reach_masks = pd.read_csv('/home/macleanlab/Downloads/20220415_mouse98_allevents_cam1DLC_processed_reachlogical_30Hz.csv')
     reach_begin_end_indices = pd.read_csv('/home/macleanlab/Downloads/20220415_mouse98_allevents_cam1DLC_processed_reachindices_30Hz.csv')
 
-    #print(data_dict)
-    neural_data = data_dict['neuron']['C']
-    ##print(neural_data.shape)
-    df = create_pandas_df_transpose(neural_data)
-    binned_data = bin_data(df)
+    if load == False:
+        #print(data_dict)
+        neural_data = data_dict['neuron']['C']
+        ##print(neural_data.shape)
+        df = create_pandas_df_transpose(neural_data)
+        binned_data = bin_data(df)
 
-    sigma = np.std(df)
-    mu = np.mean(df)
+        sigma = np.std(df)
+        mu = np.mean(df)
 
-    spiked_binned_data = assign_spike_values_to_bins(binned_data, sigma[0], mu)
-    graph_adjacency_matrix = create_graph(spiked_binned_data)
+        spiked_binned_data = assign_spike_values_to_bins(binned_data, sigma[0], mu)
+        graph_adjacency_matrix = create_graph(spiked_binned_data)
 
-    background_graph = background(graph_adjacency_matrix)
-    residual_graph = residual(background_graph, graph_adjacency_matrix)
-    normed_graph = normed_residual(residual_graph)
-    plt.imshow(normed_graph)
-    plt.show()
+        background_graph = background(graph_adjacency_matrix)
+        residual_graph = residual(background_graph, graph_adjacency_matrix)
+        normed_graph = normed_residual(residual_graph)
+        plt.imshow(normed_graph)
+        plt.show()
+
+        np.save("/home/macleanlab/Desktop/chris_data_out/numpy/normed_graph.npy", normed_graph)
+    else:
+        normed_graph = np.load("/home/macleanlab/Desktop/chris_data_out/numpy/normed_graph.npy")
 
     #df = pd.DataFrame(subset_reaches(np.array(df), reach_masks))
     #df = pd.DataFrame(subset_individual_reaches(np.array(df)))
@@ -340,7 +347,7 @@ def main():
     unit_analyzer.compute_top_central_units()
     print(graph)
     '''
-    compute_graph_centrality(normed_graph)
+    compute_graph_centrality(graph)
     compute_umap(normed_graph)
 
 
