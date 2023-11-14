@@ -1,6 +1,7 @@
 # This is a sample Python script.
 
 import mat73
+import matplotlib.cm
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
@@ -8,8 +9,26 @@ import pandas as pd
 import networkx as nx
 import umap
 import plotly.express as px
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 #import single_unit_analyzer
 from sklearn.linear_model import LinearRegression
+from sklearn.decomposition import PCA
+import matplotlib.colors as mcolors
+import matplotlib.cm as cm
+from matplotlib import colormaps
+from matplotlib.colors import LinearSegmentedColormap
+import numpy as np
+from scipy.stats import zscore
+
+def zify_scipy(d):
+    keys, vals = zip(*d.items())
+    return dict(zip(keys, zscore(vals, ddof=1)))
+
+c = ["darkred", "red", "lightcoral", "white", "palegreen", "green", "darkgreen"]
+v = [0, .15, .4, .5, 0.6, .9, 1.]
+l = list(zip(v, c))
+cmap = LinearSegmentedColormap.from_list('rg', l, N=256)
+
 
 def split_dataframe(df, chunk_size = 10000):
     chunks = list()
@@ -124,35 +143,85 @@ def compute_graph_centrality(graph):
     #plt.title("Page Rank")
     #plt.show()
 
-    return deg_centrality
+    return bet_centrality
 
+
+def plot_degree_dist(G):
+    degrees = [G.degree(n) for n in G.nodes()]
+    #plt.hist(degrees)
+    #plt.show()
+    n, bins, patches = plt.hist(degrees, bins=50, facecolor='#2ab0ff', edgecolor='#e0e0e0', linewidth=0.8, alpha=0.9)
+
+
+    n = n.astype('int')  # it MUST be integer# Good old loop. Choose colormap of your taste
+    for i in range(len(patches)):
+        patches[i].set_facecolor(cmap(n[i] / max(n)))  # Make one bin stand out
+    '''
+    patches[47].set_fc('red')  # Set color
+    patches[47].set_alpha(1)  # Set opacity# Add annotation
+    plt.annotate('Important Bar!', xy=(0.57, 175), xytext=(2, 130), fontsize=15,
+                 arrowprops={'width': 0.4, 'headwidth': 7,
+                             'color': '#333333'})  # Add title and labels with custom font sizes
+    '''
+    plt.title('Full Session Degree Distribution', fontsize=12)
+    plt.xlabel('Bins', fontsize=10)
+    plt.ylabel('Values', fontsize=10)
+    plt.show()
+
+def plot_weight_dist(G):
+    weights = [G.weight(n) for n in G.nodes()]
+    plt.hist(weights)
+    plt.show()
 
 def show_graph_with_labels(adjacency_matrix, counter=0):
 
-    upper_quartile = False
+    upper_quartile = True
 
     G = nx.from_numpy_array(adjacency_matrix, create_using=nx.DiGraph)
     layout = nx.spring_layout(G)
+
 
     color_lookup = {k: v for v, k in enumerate(sorted(set(G.nodes())))}
     low, *_, high = sorted(color_lookup.values())
     norm = mpl.colors.Normalize(vmin=low, vmax=high, clip=True)
     mapper = mpl.cm.ScalarMappable(norm=norm, cmap=mpl.cm.coolwarm)
 
-    nx.draw(G, layout, nodelist=color_lookup, node_color=[mapper.to_rgba(i) for i in color_lookup.values()])
+    #nx.draw(G, layout, nodelist=color_lookup, node_color=[mapper.to_rgba(i) for i in color_lookup.values()])
 
-    nx.draw_networkx_edges(G, pos=layout)
+    #nx.draw_networkx_edges(G, pos=layout)
 
     prefix = '/home/macleanlab/Desktop/chris_data_out/'
     save_path = prefix + 'graphs/' + str(counter) + '.png'
 
-    plt.savefig(fname=save_path, format='png')
-    plt.show()
+    #plt.show()
+
+    c = ["darkred", "red", "lightcoral", "white", "palegreen", "green", "darkgreen"]
+    v = [0, .15, .4, .5, 0.6, .9, 1.]
+    l = list(zip(v, c))
+    cmap = LinearSegmentedColormap.from_list('rg', l, N=256)
 
     if upper_quartile == True:
-        threshold = np.percentile(adjacency_matrix.flatten(), 75)
+        threshold = np.percentile(adjacency_matrix.flatten(), 95)
         G.remove_edges_from([(n1, n2) for n1, n2, w in G.edges(data="weight") if abs(w) < threshold])
-        nx.draw(G, nodelist=color_lookup, node_color=[mapper.to_rgba(i) for i in color_lookup.values()])
+        deg_centrality = nx.degree_centrality(G)
+        #nx.draw(G, layout, nodelist=color_lookup, node_color=[mapper.to_rgba(i) for i in color_lookup.values()])
+        #plt.savefig(fname=save_path, format='png')
+        #plt.show()
+        print(deg_centrality)
+        cent = np.fromiter(deg_centrality.values(), float)
+        sizes = cent / np.max(cent) * 350
+        normalize = mcolors.Normalize(vmin=cent.min(), vmax=cent.max())
+        colormap = cmap
+
+        scalarmappaple = cm.ScalarMappable(norm=normalize, cmap=colormap)
+        scalarmappaple.set_array(cent)
+        fig, ax = plt.subplots()
+        plt.title("Full Session Graph (95th Percentile)")
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes('right', size='5%', pad=0.05)
+
+        plt.colorbar(scalarmappaple, cax=cax)
+        nx.draw(G, layout, ax=ax, node_size=sizes, node_color=sizes, cmap=colormap)
         plt.show()
 
 
@@ -189,46 +258,51 @@ def compute_umap(data, counter=0):
 
 def loop_through_reaches(reaches):
     dc_df = None
+    init = True
     for idx, reach in enumerate(reaches):
-        #print(reach)
-        print('----------------------------------')
-        df = pd.DataFrame(reach)
-        print(df)
-        binned_data = bin_data(df)
+        if(reach.shape[0] > 10):
+            #print(reach)
+            print('----------------------------------')
+            df = pd.DataFrame(reach)
+            print(df)
+            binned_data = bin_data(df)
 
-        sigma = np.std(df)
-        mu = np.mean(df)
+            sigma = np.std(df)
+            mu = np.mean(df)
 
-        spiked_binned_data = assign_spike_values_to_bins(binned_data, sigma[0], mu)
-        graph_adjacency_matrix = create_graph(spiked_binned_data)
-        background_graph = background(graph_adjacency_matrix)
-        residual_graph = residual(background_graph, graph_adjacency_matrix)
-        normed_graph = normed_residual(residual_graph)
-        #plt.imshow(graph_adjacency_matrix)
-        #plt.show()
-
-        graph = show_graph_with_labels(normed_graph, idx)
-
-        dc = compute_graph_centrality(graph)
-
-        if idx == 0:
-            dc_df = pd.DataFrame.from_dict(dc, orient='index')
-            dc_df = dc_df.rename(columns={0: 'reach 0'})
-        else:
-            dc_df["reach" + str(idx)] = pd.Series(dc)
-        print("dc: ")
-        print(dc)
-        print('-------------------------------')
-        print(dc_df)
-        print('-------------------------------')
-        dc_df.to_csv('/home/macleanlab/Desktop/chris_data_out/centrality_csv/'+str(idx)+'.csv')
-        compute_umap(np.array(df), idx)
+            spiked_binned_data = assign_spike_values_to_bins(binned_data, sigma[0], mu)
+            graph_adjacency_matrix = create_graph(spiked_binned_data)
+            background_graph = background(graph_adjacency_matrix)
+            print('computing res')
+            residual_graph = residual(background_graph, graph_adjacency_matrix)
+            print('computing res norm graph')
+            normed_graph = normed_residual(residual_graph)
+            plt.imshow(graph_adjacency_matrix)
+            plt.show()
+            print('showing graph')
+            graph = show_graph_with_labels(normed_graph, idx)
+            print('computing centrality')
+            dc = compute_graph_centrality(graph)
+            print('adding centrality to dataframe')
+            if init:
+                init = False
+                dc_df = pd.DataFrame.from_dict(dc, orient='index')
+                dc_df = dc_df.rename(columns={0: 'reach 0'})
+            else:
+                dc_df["reach" + str(idx)] = pd.Series(dc)
+            print("dc: ")
+            print(dc)
+            print('-------------------------------')
+            print(dc_df)
+            print('-------------------------------')
+            dc_df.to_csv('/home/macleanlab/Desktop/chris_data_out/centrality_csv/'+str(idx)+'.csv')
+            compute_umap(np.array(df), idx)
 
 def loop_throgh_non_reaches():
     print()
 
 def subset_reaches(data, masks):
-    return data[np.where(masks != 0)[0], :] ##!= gets all reaches
+    return data[np.where(masks != 1)[0], :] ##!= gets all reaches
 
 def subset_non_reaches(data, masks):
     return data[np.where(masks == 0)[0], :] ##!= gets all reaches
@@ -253,7 +327,7 @@ def background(reexpress_graph):
             if pre != post:
                 mean1 = np.mean(reexpress_graph[pre, neurons[neurons != post]])
                 mean2 = np.mean(reexpress_graph[neurons[neurons != pre], post])
-                background[pre, post] =  mean1 * mean2
+                background[pre, post] = mean1 * mean2
 
     return background
 
@@ -316,19 +390,20 @@ def find_subgraph(Gg):
 
 def main():
 
-    load = True
+    load = 2
 
     #unit_analyzer = single_unit_analyzer.single_unit_analyzer()
 
     data_dict = mat73.loadmat('/home/macleanlab/Downloads/evaluation_mouse98_0415/evaluated_mouse98_20220415_20230831-172942.mat')
     reach_masks = pd.read_csv('/home/macleanlab/Downloads/20220415_mouse98_allevents_cam1DLC_processed_reachlogical_30Hz.csv')
     reach_begin_end_indices = pd.read_csv('/home/macleanlab/Downloads/20220415_mouse98_allevents_cam1DLC_processed_reachindices_30Hz.csv')
+    # print(data_dict)
+    neural_data = data_dict['neuron']['C']
+    ##print(neural_data.shape)
+    df = create_pandas_df_transpose(neural_data)
 
-    if load == False:
-        #print(data_dict)
-        neural_data = data_dict['neuron']['C']
-        ##print(neural_data.shape)
-        df = create_pandas_df_transpose(neural_data)
+    if load == 0:
+
         binned_data = bin_data(df)
 
         sigma = np.std(df)
@@ -344,12 +419,35 @@ def main():
         plt.show()
 
         np.save("/home/macleanlab/Desktop/chris_data_out/numpy/normed_graph.npy", normed_graph)
-    else:
+    elif load == 1:
         normed_graph = np.load("/home/macleanlab/Desktop/chris_data_out/numpy/normed_graph.npy")
         print('normed graph loaded from numpy array!')
+        #plt.imshow(normed_graph,cmap='inferno')
+        #plt.title("Full Session Weight Distribution")
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        axp = ax.imshow(normed_graph, cmap='inferno')
+        cb = plt.colorbar(axp, ax=[ax], location='right')
+        plt.title("Full Session Weight Distribution")
+        plt.show()
 
-    #df = pd.DataFrame(subset_reaches(np.array(df), reach_masks))
+
+    df = pd.DataFrame(subset_reaches(np.array(df), reach_masks))
     #df = pd.DataFrame(subset_individual_reaches(np.array(df)))
+    binned_data = bin_data(df)
+
+    sigma = np.std(df)
+    mu = np.mean(df)
+
+    spiked_binned_data = assign_spike_values_to_bins(binned_data, sigma[0], mu)
+    graph_adjacency_matrix = create_graph(spiked_binned_data)
+
+    background_graph = background(graph_adjacency_matrix)
+    residual_graph = residual(background_graph, graph_adjacency_matrix)
+    normed_graph = normed_residual(residual_graph)
+    plt.imshow(normed_graph)
+    plt.show()
+
     #reach_list = subset_reaches_by_frame_start_and_end(df.to_numpy(), reach_begin_end_indices.to_numpy())
     #loop_through_reaches(reach_list)
 
@@ -380,10 +478,64 @@ def main():
     print(graph)
     '''
 
-    compute_graph_centrality(graph)
+    deg = compute_graph_centrality(graph)
     compute_umap(normed_graph)
+
+    pca = PCA(n_components=2)
+
+    principalComponents = pca.fit_transform(normed_graph)
+    print(principalComponents)
+    print(principalComponents.shape)
+    print(pca.explained_variance_ratio_)
+    plt.scatter(principalComponents[:, 0], principalComponents[:, 2])
+    plt.show()
+    plot_degree_dist(graph)
+
+
+
+    deg_z_scores = zify_scipy(deg)
+    print(deg_z_scores)
+    deg_z_scores_sorted = dict(sorted(deg_z_scores.items(), key=lambda x: x[1]))
+
+    neuron_idx = list(deg_z_scores_sorted.keys())  # list() needed for python 3.x
+    deg_z_scores_to_plot = list(deg_z_scores_sorted.values())
+    print(neuron_idx)
+    print(deg_z_scores)
+    # plotting a line plot after changing it's width and height
+    f = plt.figure()
+    f.set_figwidth(5)
+    f.set_figheight(7)
+
+    new = []
+    for j in neuron_idx:
+        new.append(str(j))
+
+    plt.plot(list(deg_z_scores.values()), list(deg_z_scores.items()), 'g-')
+    plt.xlabel("Standardized Z-Score")
+    plt.ylabel("Neuron Index")
+    plt.title("Full Session Betweenness Centrality")
+    plt.show()
+
+
+    f = plt.figure()
+    f.set_figwidth(5)
+    f.set_figheight(7)
+
+
+    plt.plot(deg_z_scores_to_plot[153:183], new[153:183], 'g-')
+    plt.xlabel("Standardized Z-Score")
+    plt.ylabel("Neuron Index")
+    plt.title("Full Session Betweenness Centrality Top N")
+    plt.yticks(fontsize=10)
+    plt.show()
+
 
 
 if __name__ == '__main__':
     main()
 
+
+##analysis from functional group paper -
+#edge weight vs degree/prev figures
+#graph alignment score
+#
