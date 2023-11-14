@@ -150,7 +150,7 @@ def plot_degree_dist(G):
     degrees = [G.degree(n) for n in G.nodes()]
     #plt.hist(degrees)
     #plt.show()
-    n, bins, patches = plt.hist(degrees, bins=50, facecolor='#2ab0ff', edgecolor='#e0e0e0', linewidth=0.8, alpha=0.9)
+    n, bins, patches = plt.hist(degrees, bins=40, facecolor='#2ab0ff', edgecolor='#e0e0e0', linewidth=0.8, alpha=0.9)
 
 
     n = n.astype('int')  # it MUST be integer# Good old loop. Choose colormap of your taste
@@ -163,7 +163,7 @@ def plot_degree_dist(G):
                  arrowprops={'width': 0.4, 'headwidth': 7,
                              'color': '#333333'})  # Add title and labels with custom font sizes
     '''
-    plt.title('Full Session Degree Distribution', fontsize=12)
+    plt.title('Non-reach Degree Distribution', fontsize=12)
     plt.xlabel('Bins', fontsize=10)
     plt.ylabel('Values', fontsize=10)
     plt.show()
@@ -216,7 +216,7 @@ def show_graph_with_labels(adjacency_matrix, counter=0):
         scalarmappaple = cm.ScalarMappable(norm=normalize, cmap=colormap)
         scalarmappaple.set_array(cent)
         fig, ax = plt.subplots()
-        plt.title("Full Session Graph (95th Percentile)")
+        plt.title("Non-reach Graph (95th Percentile)")
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
 
@@ -445,7 +445,12 @@ def main():
     background_graph = background(graph_adjacency_matrix)
     residual_graph = residual(background_graph, graph_adjacency_matrix)
     normed_graph = normed_residual(residual_graph)
-    plt.imshow(normed_graph)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    axp = ax.imshow(normed_graph, cmap='inferno')
+    cb = plt.colorbar(axp, ax=[ax], location='right')
+    plt.title("Non-reach Weight Distribution")
     plt.show()
 
     #reach_list = subset_reaches_by_frame_start_and_end(df.to_numpy(), reach_begin_end_indices.to_numpy())
@@ -487,7 +492,7 @@ def main():
     print(principalComponents)
     print(principalComponents.shape)
     print(pca.explained_variance_ratio_)
-    plt.scatter(principalComponents[:, 0], principalComponents[:, 2])
+    plt.scatter(principalComponents[:, 0], principalComponents[:, 1])
     plt.show()
     plot_degree_dist(graph)
 
