@@ -29,6 +29,9 @@ class single_unit_analyzer:
 
         self.df['Page Rank'] = self. df.index.to_series().map(pr)
 
+        print(self.df)
+        print('------------------------------------------------------------------')
+
 
     def set_graph(self, graph):
         self.graph = graph
