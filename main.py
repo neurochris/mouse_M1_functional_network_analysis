@@ -163,7 +163,7 @@ def plot_degree_dist(G):
                  arrowprops={'width': 0.4, 'headwidth': 7,
                              'color': '#333333'})  # Add title and labels with custom font sizes
     '''
-    plt.title('Non-reach Degree Distribution', fontsize=12)
+    plt.title('Reach Degree Distribution', fontsize=12)
     plt.xlabel('Bins', fontsize=10)
     plt.ylabel('Values', fontsize=10)
     plt.show()
@@ -201,7 +201,18 @@ def show_graph_with_labels(adjacency_matrix, counter=0):
     cmap = LinearSegmentedColormap.from_list('rg', l, N=256)
 
     if upper_quartile == True:
-        threshold = np.percentile(adjacency_matrix.flatten(), 95)
+        threshold = np.percentile(adjacency_matrix.flatten(), 75)
+
+
+
+
+        ##75 for non reach non graph figures - figs on right
+        ##try 25-50 next
+
+
+
+
+
         G.remove_edges_from([(n1, n2) for n1, n2, w in G.edges(data="weight") if abs(w) < threshold])
         deg_centrality = nx.degree_centrality(G)
         #nx.draw(G, layout, nodelist=color_lookup, node_color=[mapper.to_rgba(i) for i in color_lookup.values()])
@@ -216,7 +227,7 @@ def show_graph_with_labels(adjacency_matrix, counter=0):
         scalarmappaple = cm.ScalarMappable(norm=normalize, cmap=colormap)
         scalarmappaple.set_array(cent)
         fig, ax = plt.subplots()
-        plt.title("Non-reach Graph (95th Percentile)")
+        plt.title("Reach Graph (95th Percentile)")
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
 
@@ -302,7 +313,7 @@ def loop_throgh_non_reaches():
     print()
 
 def subset_reaches(data, masks):
-    return data[np.where(masks != 1)[0], :] ##!= gets all reaches
+    return data[np.where(masks != 0)[0], :] ##!= gets all reaches
 
 def subset_non_reaches(data, masks):
     return data[np.where(masks == 0)[0], :] ##!= gets all reaches
@@ -388,6 +399,15 @@ def find_subgraph(Gg):
         # plt.savefig(fname=save_path, format='png')
         plt.show()
 
+def analyze_subgraphs(G):
+    ug_sub = G.to_undirected()
+
+    # get list of subgraphs that have directed compenents from sub list of nodes
+    list_of_subgraphs = [c for c in sorted(nx.connected_components(ug_sub), key=len, reverse=True)]
+
+    for g in list_of_subgraphs:
+        print(g)
+
 def main():
 
     load = 2
@@ -450,7 +470,7 @@ def main():
     ax = fig.add_subplot(111)
     axp = ax.imshow(normed_graph, cmap='inferno')
     cb = plt.colorbar(axp, ax=[ax], location='right')
-    plt.title("Non-reach Weight Distribution")
+    plt.title("Reach Weight Distribution")
     plt.show()
 
     #reach_list = subset_reaches_by_frame_start_and_end(df.to_numpy(), reach_begin_end_indices.to_numpy())
@@ -518,7 +538,7 @@ def main():
     plt.plot(list(deg_z_scores.values()), list(deg_z_scores.items()), 'g-')
     plt.xlabel("Standardized Z-Score")
     plt.ylabel("Neuron Index")
-    plt.title("Full Session Betweenness Centrality")
+    plt.title("Reach Betweenness Centrality")
     plt.show()
 
 
@@ -530,10 +550,12 @@ def main():
     plt.plot(deg_z_scores_to_plot[153:183], new[153:183], 'g-')
     plt.xlabel("Standardized Z-Score")
     plt.ylabel("Neuron Index")
-    plt.title("Full Session Betweenness Centrality Top N")
+    plt.title("Reach Betweenness Centrality Top N")
     plt.yticks(fontsize=10)
     plt.show()
 
+
+    analyze_subgraphs(graph)
 
 
 if __name__ == '__main__':
