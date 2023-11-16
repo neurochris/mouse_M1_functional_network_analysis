@@ -1,25 +1,20 @@
 # This is a sample Python script.
 
 import mat73
-import matplotlib.cm
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-import numpy as np
 import pandas as pd
 import networkx as nx
 import umap
 import plotly.express as px
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-#import single_unit_analyzer
 from sklearn.linear_model import LinearRegression
 from sklearn.decomposition import PCA
 import matplotlib.colors as mcolors
 import matplotlib.cm as cm
-from matplotlib import colormaps
 from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
 from scipy.stats import zscore
-import networkx.algorithms.isomorphism as iso
 
 def zify_scipy(d):
     keys, vals = zip(*d.items())
@@ -35,7 +30,7 @@ def split_dataframe(df, chunk_size = 10000):
     chunks = list()
     num_chunks = len(df) // chunk_size + 1
     for i in range(num_chunks):
-        print("on chunk number " +str(i) + " : " + str(round((i/num_chunks), 3)*100) + "%")
+        #print("on chunk number " +str(i) + " : " + str(round((i/num_chunks), 3)*100) + "%")
         chunks.append(df[i*chunk_size:(i+1)*chunk_size])
     return chunks
 
@@ -242,8 +237,7 @@ def show_graph_with_labels(adjacency_matrix, counter=0):
 
 def compute_umap(data, counter=0):
     neural_data = np.array(data)[:, :]
-    print(neural_data)
-    print(neural_data)
+
 
     umap_2d = umap.UMAP(n_components=2, init='pca', random_state=0)
     umap_3d = umap.UMAP(n_components=3, init='pca', random_state=0)
@@ -266,7 +260,6 @@ def compute_umap(data, counter=0):
         fig_2d.write_image(file=filename_2d, format='png')
         fig_3d.write_image(file=filename_3d, format='png')
     except Exception as e:
-        print(e)
         pass
 
 def loop_through_reaches(reaches):
@@ -284,9 +277,7 @@ def loop_through_reaches(reaches):
                     half_reach = reach[mid:reach.shape[0]]
 
                 #print(reach)
-                print('----------------------------------')
                 df = pd.DataFrame(half_reach)
-                print(df)
                 binned_data = bin_data(df)
 
                 sigma = np.std(df)
@@ -300,18 +291,13 @@ def loop_through_reaches(reaches):
                 #print('computing res norm graph')
                 #normed_graph = normed_residual(residual_graph)
 
-                print('showing graph')
                 graph = show_graph_with_labels(graph_adjacency_matrix, i)
-                print('computing centrality')
+
                 deg_centrality = nx.degree_centrality(graph)
                 if not all(value == 0 for value in deg_centrality.values()):
                     save_array.append(idx)
 
-                    print('********************************************************************************')
-                    print(save_array)
-                    print('********************************************************************************')
 
-                    print('adding centrality to dataframe')
                     dc = compute_graph_centrality(graph, i)
                     if init:
                         init = False
@@ -319,26 +305,20 @@ def loop_through_reaches(reaches):
                         dc_df = dc_df.rename(columns={0: 'reach 0'})
                     else:
                         dc_df["reach" + str(idx)] = pd.Series(dc)
-                    print("dc: ")
-                    print(dc)
-                    print('-------------------------------')
-                    print(dc_df)
-                    print('-------------------------------')
+
                     dc_df.to_csv('/home/macleanlab/Desktop/chris_data_out/centrality_csv/'+str(idx)+'.csv')
-                    compute_umap(np.array(df), idx)
+                    #compute_umap(np.array(df), idx)
                     pca = PCA(n_components=2)
                     plt.imshow(graph_adjacency_matrix)
                     plt.show()
 
                     principalComponents = pca.fit_transform(graph_adjacency_matrix)
-                    print(principalComponents)
-                    print(principalComponents.shape)
-                    print(pca.explained_variance_ratio_)
+
                     plt.scatter(principalComponents[:, 0], principalComponents[:, 1])
                     plt.title("Stage: " + str(i) + " " + str(idx))
                     plt.show()
                     plot_degree_dist(graph)
-    np.save("/home/macleanlab/Downloads/idx_list.npy", np.array(save_array))
+                    np.save("/home/macleanlab/Downloads/idx_list.npy", np.array(save_array))
 
 def loop_throgh_non_reaches():
     print()
@@ -505,9 +485,12 @@ def main():
     #plt.title("Reach Weight Distribution")
     #plt.show()
 
-    reach_list = subset_reaches_by_frame_start_and_end(df.to_numpy(), reach_begin_end_indices.to_numpy())
-    print(reach_list)
-    loop_through_reaches(reach_list)
+    arr = np.load("/home/macleanlab/Downloads/idx_list.npy")
+    print(arr)
+
+    #reach_list = subset_reaches_by_frame_start_and_end(df.to_numpy(), reach_begin_end_indices.to_numpy())
+    #print(reach_list)
+    #loop_through_reaches(reach_list)
 
     ##print(reach_begin_end_indices)
     ##print('-----------------------------------------------------------')
