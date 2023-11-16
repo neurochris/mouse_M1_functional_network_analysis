@@ -272,6 +272,7 @@ def compute_umap(data, counter=0):
 def loop_through_reaches(reaches):
     dc_df = None
     init = True
+    save_array=[]
     for idx, reach in enumerate(reaches):
         if(reach.shape[0] > 6):
             for i in range(2):
@@ -298,14 +299,20 @@ def loop_through_reaches(reaches):
                 #residual_graph = residual(background_graph, graph_adjacency_matrix)
                 #print('computing res norm graph')
                 #normed_graph = normed_residual(residual_graph)
-                plt.imshow(graph_adjacency_matrix)
-                plt.show()
+
                 print('showing graph')
                 graph = show_graph_with_labels(graph_adjacency_matrix, i)
                 print('computing centrality')
-                dc = compute_graph_centrality(graph, i)
-                if all(value == 0 for value in dc.values()):
+                deg_centrality = nx.degree_centrality(graph)
+                if not all(value == 0 for value in deg_centrality.values()):
+                    save_array.append(idx)
+
+                    print('********************************************************************************')
+                    print(save_array)
+                    print('********************************************************************************')
+
                     print('adding centrality to dataframe')
+                    dc = compute_graph_centrality(graph, i)
                     if init:
                         init = False
                         dc_df = pd.DataFrame.from_dict(dc, orient='index')
@@ -320,15 +327,18 @@ def loop_through_reaches(reaches):
                     dc_df.to_csv('/home/macleanlab/Desktop/chris_data_out/centrality_csv/'+str(idx)+'.csv')
                     compute_umap(np.array(df), idx)
                     pca = PCA(n_components=2)
+                    plt.imshow(graph_adjacency_matrix)
+                    plt.show()
 
                     principalComponents = pca.fit_transform(graph_adjacency_matrix)
                     print(principalComponents)
                     print(principalComponents.shape)
                     print(pca.explained_variance_ratio_)
                     plt.scatter(principalComponents[:, 0], principalComponents[:, 1])
-                    plt.title("Stage: " + str(i))
+                    plt.title("Stage: " + str(i) + " " + str(idx))
                     plt.show()
                     plot_degree_dist(graph)
+    np.save("/home/macleanlab/Downloads/idx_list.npy", np.array(save_array))
 
 def loop_throgh_non_reaches():
     print()
