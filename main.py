@@ -485,8 +485,35 @@ def main():
     #plt.title("Reach Weight Distribution")
     #plt.show()
 
+
+
+
+
+
+
+
+    ##look at autocorrelation between all reaches - csv file of centrality or maybe between adj matrices of graphs
+    ##analysis of first and second half of reaches - centrality and autocorrelation
+
     arr = np.load("/home/macleanlab/Downloads/idx_list.npy")
     print(arr)
+
+    for i, a in enumerate(arr):
+        if i < len(arr)-1:
+            if a == arr[i+1]:
+                print(a)
+
+                ##this is index of reach that is well defined for first and second half
+                ##make graph and plot graph with centrality
+                ##then look at other analysis
+
+
+
+
+
+
+
+
 
     #reach_list = subset_reaches_by_frame_start_and_end(df.to_numpy(), reach_begin_end_indices.to_numpy())
     #print(reach_list)
