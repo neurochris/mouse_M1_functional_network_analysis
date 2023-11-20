@@ -15,6 +15,7 @@ import matplotlib.cm as cm
 from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
 from scipy.stats import zscore
+import cv2
 
 def zify_scipy(d):
     keys, vals = zip(*d.items())
@@ -100,10 +101,10 @@ def compute_conmi(vec1, vec2):
 def create_graph(data):
 
     data = np.array(data)
-    graph = np.zeros((183, 183))
+    graph = np.zeros((92, 92))
 
-    for i in range(183):
-        for j in range(183):
+    for i in range(92):
+        for j in range(92):
             graph[i][j] = compute_conmi(data[:, i], data[:, j])
 
     graph[np.isnan(graph)] = 0
@@ -113,24 +114,24 @@ def create_graph(data):
 
     return graph
 
-def compute_graph_centrality(graph, i):
+def compute_graph_centrality(graph):
     deg_centrality = nx.degree_centrality(graph)
 
     plt.plot(*zip(*sorted(deg_centrality.items())))
-    plt.title("Degree Centrality "+str(i))
+    plt.title("Degree Centrality ")
     plt.show()
 
     close_centrality = nx.closeness_centrality(graph)
 
 
     plt.plot(*zip(*sorted(close_centrality.items())))
-    plt.title("Close Centrality" +str(i))
+    plt.title("Close Centrality" )
     plt.show()
 
     bet_centrality = nx.betweenness_centrality(graph, normalized=True, endpoints=False)
 
     plt.plot(*zip(*sorted(bet_centrality.items())))
-    plt.title("Between Centrality"+str(i))
+    plt.title("Between Centrality")
     plt.show()
 
     #pr = nx.pagerank(graph, alpha=0.8)
@@ -159,7 +160,7 @@ def plot_degree_dist(G):
                  arrowprops={'width': 0.4, 'headwidth': 7,
                              'color': '#333333'})  # Add title and labels with custom font sizes
     '''
-    plt.title('Reach Degree Distribution', fontsize=12)
+    plt.title('Full Session Superficial Neurons Degree Distribution', fontsize=12)
     plt.xlabel('Bins', fontsize=10)
     plt.ylabel('Values', fontsize=10)
     plt.show()
@@ -171,7 +172,7 @@ def plot_weight_dist(G):
 
 def show_graph_with_labels(adjacency_matrix, counter=0):
 
-    upper_quartile = False
+    upper_quartile = True
 
     G = nx.from_numpy_array(adjacency_matrix, create_using=nx.DiGraph)
     layout = nx.spring_layout(G)
@@ -200,15 +201,8 @@ def show_graph_with_labels(adjacency_matrix, counter=0):
     if upper_quartile == True:
         threshold = np.percentile(adjacency_matrix.flatten(), 75)
 
-
-
-
         ##75 for non reach non graph figures - figs on right
         ##try 25-50 next
-
-
-
-
 
         G.remove_edges_from([(n1, n2) for n1, n2, w in G.edges(data="weight") if abs(w) < threshold])
         deg_centrality = nx.degree_centrality(G)
@@ -224,7 +218,7 @@ def show_graph_with_labels(adjacency_matrix, counter=0):
         scalarmappaple = cm.ScalarMappable(norm=normalize, cmap=colormap)
         scalarmappaple.set_array(cent)
         fig, ax = plt.subplots()
-        plt.title("Reach Graph (95th Percentile)")
+        plt.title("Full Session Superficial Neurons Graph (95th Percentile)")
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
 
@@ -324,7 +318,7 @@ def loop_throgh_non_reaches():
     print()
 
 def subset_reaches(data, masks):
-    return data[np.where(masks != 0)[0], :] ##!= gets all reaches
+    return data[np.where(masks != 1)[0], :] ##!= gets all reaches
 
 def subset_non_reaches(data, masks):
     return data[np.where(masks == 0)[0], :] ##!= gets all reaches
@@ -426,42 +420,149 @@ def main():
 
     #unit_analyzer = single_unit_analyzer.single_unit_analyzer()
 
-    data_dict = mat73.loadmat('/home/macleanlab/Downloads/evaluation_mouse98_0415/evaluated_mouse98_20220415_20230831-172942.mat')
+    #data_dict = mat73.loadmat('/home/macleanlab/Downloads/evaluation_mouse98_0415/evaluated_mouse98_20220415_20230831-172942.mat')
     reach_masks = pd.read_csv('/home/macleanlab/Downloads/20220415_mouse98_allevents_cam1DLC_processed_reachlogical_30Hz.csv')
     reach_begin_end_indices = pd.read_csv('/home/macleanlab/Downloads/20220415_mouse98_allevents_cam1DLC_processed_reachindices_30Hz.csv')
     # print(data_dict)
-    neural_data = data_dict['neuron']['C']
+    #neural_data = data_dict['neuron']['C']
     ##print(neural_data.shape)
-    df = create_pandas_df_transpose(neural_data)
 
-    if load == 0:
 
-        binned_data = bin_data(df)
 
-        sigma = np.std(df)
-        mu = np.mean(df)
 
-        spiked_binned_data = assign_spike_values_to_bins(binned_data, sigma[0], mu)
-        graph_adjacency_matrix = create_graph(spiked_binned_data)
 
-        background_graph = background(graph_adjacency_matrix)
-        residual_graph = residual(background_graph, graph_adjacency_matrix)
-        normed_graph = normed_residual(residual_graph)
-        plt.imshow(normed_graph)
-        plt.show()
+    data_dict = mat73.loadmat('/home/macleanlab/Downloads/evaluation_mouse98_0415/evaluated_mouse98_20220415_20230831-172942.mat')
+    spatial_data = mat73.loadmat('/home/macleanlab/Downloads/evaluation_mouse98_0415/spatialfootprintsforcellreg_mouse98_20220415.mat')
 
-        np.save("/home/macleanlab/Desktop/chris_data_out/numpy/normed_graph.npy", normed_graph)
-    elif load == 1:
-        normed_graph = np.load("/home/macleanlab/Desktop/chris_data_out/numpy/normed_graph.npy")
-        print('normed graph loaded from numpy array!')
-        #plt.imshow(normed_graph,cmap='inferno')
-        #plt.title("Full Session Weight Distribution")
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        axp = ax.imshow(normed_graph, cmap='inferno')
-        cb = plt.colorbar(axp, ax=[ax], location='right')
-        plt.title("Full Session Weight Distribution")
-        plt.show()
+    data_dict_second_level = data_dict['neuron']
+
+    spatial_data_second_level = spatial_data['A']
+
+
+    spikes = np.array(data_dict_second_level['S'])
+
+    df = create_pandas_df_transpose(spikes)
+
+    print('spikes: ')
+    print(spikes.shape)
+
+    '''
+
+    df = pd.DataFrame(subset_reaches(df.to_numpy(), reach_masks))
+
+    print(df)
+
+    idx = np.random.randint(low=0, high=60000, size=10000)
+    print(np.sort(idx))
+
+    spikes = df.sample(10000, random_state=69).to_numpy()
+    print(spikes)
+
+
+
+    mu = np.mean(df.to_numpy())
+    sigma = np.std(df.to_numpy())
+    threshold = .99
+    print(threshold)
+    spikes[spikes >= threshold] = 1
+    spikes[spikes < threshold] = 0
+
+    print(spikes[spikes==1])
+
+
+    graph_adjacency_matrix = create_graph(spikes)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    axp = ax.imshow(graph_adjacency_matrix, cmap='inferno')
+    cb = plt.colorbar(axp, ax=[ax], location='right')
+    plt.title("Full Session Weight Distribution")
+    plt.show()
+
+
+    background_graph = background(graph_adjacency_matrix)
+    residual_graph = residual(background_graph, graph_adjacency_matrix)
+    normed_graph = normed_residual(residual_graph)
+
+
+    #normed_graph = np.load("/home/macleanlab/Desktop/chris_data_out/numpy/normed_graph.npy")
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    axp = ax.imshow(normed_graph, cmap='inferno')
+    cb = plt.colorbar(axp, ax=[ax], location='right')
+    plt.title("Non-reach Weight Distribution")
+    plt.show()
+
+
+    graph = show_graph_with_labels(normed_graph)
+
+
+    #np.save("/home/macleanlab/Desktop/chris_data_out/numpy/normed_graph.npy", normed_graph)
+
+
+    deg = compute_graph_centrality(graph)
+    compute_umap(normed_graph)
+
+    pca = PCA(n_components=2)
+
+    principalComponents = pca.fit_transform(graph_adjacency_matrix)
+    print(principalComponents)
+    print(principalComponents.shape)
+    print(pca.explained_variance_ratio_)
+    plt.scatter(principalComponents[:, 0], principalComponents[:, 1])
+    plt.show()
+    plot_degree_dist(graph)
+
+
+
+    deg_z_scores = zify_scipy(deg)
+    print(deg_z_scores)
+    deg_z_scores_sorted = dict(sorted(deg_z_scores.items(), key=lambda x: x[1]))
+
+    neuron_idx = list(deg_z_scores_sorted.keys())  # list() needed for python 3.x
+    deg_z_scores_to_plot = list(deg_z_scores_sorted.values())
+    print(neuron_idx)
+    print(deg_z_scores)
+    # plotting a line plot after changing it's width and height
+    f = plt.figure()
+    f.set_figwidth(5)
+    f.set_figheight(7)
+
+    new = []
+    for j in neuron_idx:
+        new.append(str(j))
+
+    plt.plot(list(deg_z_scores.values()), list(deg_z_scores.items()), 'g-')
+    plt.xlabel("Standardized Z-Score")
+    plt.ylabel("Neuron Index")
+    plt.title("Non-reach Degree Centrality")
+    plt.show()
+
+
+    f = plt.figure()
+    f.set_figwidth(5)
+    f.set_figheight(7)
+
+
+    plt.plot(deg_z_scores_to_plot[153:183], new[153:183], 'g-')
+    plt.xlabel("Standardized Z-Score")
+    plt.ylabel("Neuron Index")
+    plt.title("Non-reach Degree Centrality Top N")
+    plt.yticks(fontsize=10)
+    plt.show()
+    '''
+
+
+
+
+
+
+
+
+
+
+
 
 
     #df = pd.DataFrame(subset_reaches(np.array(df), reach_masks))
@@ -495,18 +596,145 @@ def main():
     ##look at autocorrelation between all reaches - csv file of centrality or maybe between adj matrices of graphs
     ##analysis of first and second half of reaches - centrality and autocorrelation
 
-    arr = np.load("/home/macleanlab/Downloads/idx_list.npy")
-    print(arr)
+    ##arr = np.load("/home/macleanlab/Downloads/idx_list.npy")
 
-    for i, a in enumerate(arr):
-        if i < len(arr)-1:
-            if a == arr[i+1]:
-                print(a)
+    spatial_coordinates = dict()
+    plt.imshow(spatial_data_second_level[100, :, :])
+    plt.show()
 
-                ##this is index of reach that is well defined for first and second half
-                ##make graph and plot graph with centrality
-                ##then look at other analysis
+    img = spatial_data_second_level[100, :, :].reshape((198, 318, 1))
+    print(img.shape)
 
+    for idx, im in enumerate(spatial_data_second_level):
+        img = im.reshape((198, 318, 1))
+        # convert the image to grayscale
+        gray_image = np.uint8(img * 255)
+
+        # convert the grayscale image to binary image
+        ret, thresh = cv2.threshold(gray_image, 127, 255, 0)
+
+        # find contours in the binary image
+        im2, contours = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        for c in im2:
+            # calculate moments for each contour
+            M = cv2.moments(c)
+
+            # calculate x,y coordinate of center
+            cX = int(M["m10"] / M["m00"])
+            cY = int(M["m01"] / M["m00"])
+            print(cX)
+            print(cY)
+            spatial_coordinates[idx] = cY
+
+    print(spatial_coordinates)
+
+    sorted_spatial_coordinates = {k: v for k, v in sorted(spatial_coordinates.items(), key=lambda item: item[1])}
+    superficial_neurons = dict(list(sorted_spatial_coordinates.items())[len(sorted_spatial_coordinates) // 2:])
+    deep_neurons = dict(list(sorted_spatial_coordinates.items())[:len(sorted_spatial_coordinates) // 2])
+
+    print('------------------------------------------------------------------')
+    print(superficial_neurons)
+    print('deep')
+    print(deep_neurons)
+    print('------------------------------------------------------------------')
+
+    deep_idx = list(deep_neurons.keys())
+    superficial_idx = list(superficial_neurons.keys())
+
+    spikes_deep = np.take(spikes, deep_idx, 0)
+    spikes_superficial = np.take(spikes, superficial_idx, 0)
+
+    print('deep shape')
+    print(spikes_deep.shape)
+    print('superficial shape')
+    print(spikes_superficial.shape)
+
+    df = create_pandas_df_transpose(spikes_superficial)
+    spikes_superficial = df.to_numpy()
+
+    mu = np.mean(df.to_numpy())
+    sigma = np.std(df.to_numpy())
+    print(mu)
+    print(sigma)
+    threshold = mu+sigma
+    print(threshold)
+    spikes_superficial[spikes_superficial >= threshold] = 1
+    spikes_superficial[spikes_superficial < threshold] = 0
+
+    print('how many zeros')
+    print(spikes_superficial[spikes_superficial==0].shape)
+    print('how many ones')
+    print(spikes_superficial[spikes_superficial==1].shape)
+
+    graph_adjacency_matrix = create_graph(spikes_superficial)
+
+    background_graph = background(graph_adjacency_matrix)
+    residual_graph = residual(background_graph, graph_adjacency_matrix)
+    normed_graph = normed_residual(residual_graph)
+    print('here')
+    graph = show_graph_with_labels(normed_graph)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    axp = ax.imshow(normed_graph, cmap='inferno')
+    cb = plt.colorbar(axp, ax=[ax], location='right')
+    plt.title("Full Session Superficial Neurons Weight Distribution")
+    plt.show()
+
+    deg = compute_graph_centrality(graph)
+
+    pca = PCA(n_components=2)
+
+    principalComponents = pca.fit_transform(normed_graph) #spikes_superficial
+    print(principalComponents)
+    print(principalComponents.shape)
+    print(pca.explained_variance_ratio_)
+    plt.scatter(principalComponents[:, 0], principalComponents[:, 1])
+    plt.show()
+    plot_degree_dist(graph)
+
+    deg_z_scores = zify_scipy(deg)
+    print(deg_z_scores)
+    deg_z_scores_sorted = dict(sorted(deg_z_scores.items(), key=lambda x: x[1]))
+
+    neuron_idx = list(deg_z_scores_sorted.keys())  # list() needed for python 3.x
+    deg_z_scores_to_plot = list(deg_z_scores_sorted.values())
+    print(neuron_idx)
+    print(deg_z_scores)
+    # plotting a line plot after changing it's width and height
+    f = plt.figure()
+    f.set_figwidth(5)
+    f.set_figheight(7)
+
+    new = []
+    for j in neuron_idx:
+        new.append(str(j))
+
+    plt.plot(list(deg_z_scores.values()), list(deg_z_scores.items()), 'g-')
+    plt.xlabel("Standardized Z-Score")
+    plt.ylabel("Neuron Index")
+    plt.title("Full Session Superficial Neurons Betweenness Centrality")
+    plt.show()
+
+    f = plt.figure()
+    f.set_figwidth(5)
+    f.set_figheight(7)
+
+    plt.plot(deg_z_scores_to_plot[72:92], new[72:92], 'g-')
+    plt.xlabel("Standardized Z-Score")
+    plt.ylabel("Neuron Index")
+    plt.title("Full Session Superficial Neurons Betweenness Centrality Top N")
+    plt.yticks(fontsize=10)
+    plt.show()
+
+
+
+
+
+
+    #    for i in range(184):
+#        plt.imshow(spatial_data_second_level[i, :, :])
+#        plt.show()
 
 
 
@@ -540,6 +768,7 @@ def main():
 
     #graph = show_graph_with_labels(normed_graph)
     #find_subgraph(graph)
+
     '''
     unit_analyzer.set_graph(graph)
     unit_analyzer.compute_top_central_units()
