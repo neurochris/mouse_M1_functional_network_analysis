@@ -140,7 +140,7 @@ def compute_graph_centrality(graph):
     #plt.title("Page Rank")
     #plt.show()
 
-    return bet_centrality
+    return deg_centrality
 
 
 def plot_degree_dist(G):
@@ -160,7 +160,7 @@ def plot_degree_dist(G):
                  arrowprops={'width': 0.4, 'headwidth': 7,
                              'color': '#333333'})  # Add title and labels with custom font sizes
     '''
-    plt.title('Full Session Superficial Neurons Degree Distribution', fontsize=12)
+    plt.title('Non-reach Superficial Neurons Degree Distribution', fontsize=12)
     plt.xlabel('Bins', fontsize=10)
     plt.ylabel('Values', fontsize=10)
     plt.show()
@@ -218,7 +218,7 @@ def show_graph_with_labels(adjacency_matrix, counter=0):
         scalarmappaple = cm.ScalarMappable(norm=normalize, cmap=colormap)
         scalarmappaple.set_array(cent)
         fig, ax = plt.subplots()
-        plt.title("Full Session Superficial Neurons Graph (95th Percentile)")
+        plt.title("Non-reach Superficial Neurons Graph (95th Percentile)")
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
 
@@ -443,12 +443,12 @@ def main():
 
     df = create_pandas_df_transpose(spikes)
 
+
     print('spikes: ')
     print(spikes.shape)
 
     '''
 
-    df = pd.DataFrame(subset_reaches(df.to_numpy(), reach_masks))
 
     print(df)
 
@@ -650,6 +650,8 @@ def main():
     print(spikes_superficial.shape)
 
     df = create_pandas_df_transpose(spikes_superficial)
+    df = pd.DataFrame(subset_reaches(df.to_numpy(), reach_masks))
+
     spikes_superficial = df.to_numpy()
 
     mu = np.mean(df.to_numpy())
@@ -678,14 +680,14 @@ def main():
     ax = fig.add_subplot(111)
     axp = ax.imshow(normed_graph, cmap='inferno')
     cb = plt.colorbar(axp, ax=[ax], location='right')
-    plt.title("Full Session Superficial Neurons Weight Distribution")
+    plt.title("Non-reach Superficial Neurons Weight Distribution")
     plt.show()
 
     deg = compute_graph_centrality(graph)
 
     pca = PCA(n_components=2)
 
-    principalComponents = pca.fit_transform(normed_graph) #spikes_superficial
+    principalComponents = pca.fit_transform(spikes_superficial) #spikes_superficial
     print(principalComponents)
     print(principalComponents.shape)
     print(pca.explained_variance_ratio_)
@@ -713,7 +715,7 @@ def main():
     plt.plot(list(deg_z_scores.values()), list(deg_z_scores.items()), 'g-')
     plt.xlabel("Standardized Z-Score")
     plt.ylabel("Neuron Index")
-    plt.title("Full Session Superficial Neurons Betweenness Centrality")
+    plt.title("Non-reach Superficial Neurons Degree Centrality")
     plt.show()
 
     f = plt.figure()
@@ -723,7 +725,7 @@ def main():
     plt.plot(deg_z_scores_to_plot[72:92], new[72:92], 'g-')
     plt.xlabel("Standardized Z-Score")
     plt.ylabel("Neuron Index")
-    plt.title("Full Session Superficial Neurons Betweenness Centrality Top N")
+    plt.title("Non-reach Superficial Neurons Degree Centrality Top N")
     plt.yticks(fontsize=10)
     plt.show()
 
@@ -731,13 +733,9 @@ def main():
 
 
 
-
-    #    for i in range(184):
-#        plt.imshow(spatial_data_second_level[i, :, :])
-#        plt.show()
-
-
-
+##finished deep and super for whole session - now look at super and deep for reach non/reach
+##then quantify overlap of central nodes
+##then look into pca and start practicing presentation
 
 
 
