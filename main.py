@@ -140,7 +140,7 @@ def compute_graph_centrality(graph):
     #plt.title("Page Rank")
     #plt.show()
 
-    return deg_centrality
+    return bet_centrality
 
 
 def plot_degree_dist(G):
@@ -160,7 +160,7 @@ def plot_degree_dist(G):
                  arrowprops={'width': 0.4, 'headwidth': 7,
                              'color': '#333333'})  # Add title and labels with custom font sizes
     '''
-    plt.title('Non-reach Superficial Neurons Degree Distribution', fontsize=12)
+    plt.title('Non-reach Deep Neurons Degree Distribution', fontsize=12)
     plt.xlabel('Bins', fontsize=10)
     plt.ylabel('Values', fontsize=10)
     plt.show()
@@ -218,7 +218,7 @@ def show_graph_with_labels(adjacency_matrix, counter=0):
         scalarmappaple = cm.ScalarMappable(norm=normalize, cmap=colormap)
         scalarmappaple.set_array(cent)
         fig, ax = plt.subplots()
-        plt.title("Non-reach Superficial Neurons Graph (95th Percentile)")
+        plt.title("Non-reach Deep Neurons Graph (95th Percentile)")
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
 
@@ -318,7 +318,7 @@ def loop_throgh_non_reaches():
     print()
 
 def subset_reaches(data, masks):
-    return data[np.where(masks != 1)[0], :] ##!= gets all reaches
+    return data[np.where(masks != 0)[0], :] ##!= gets all reaches
 
 def subset_non_reaches(data, masks):
     return data[np.where(masks == 0)[0], :] ##!= gets all reaches
@@ -436,7 +436,10 @@ def main():
 
     data_dict_second_level = data_dict['neuron']
 
+    print('here')
+
     spatial_data_second_level = spatial_data['A']
+    print(spatial_data_second_level.shape)
 
 
     spikes = np.array(data_dict_second_level['S'])
@@ -491,7 +494,7 @@ def main():
     ax = fig.add_subplot(111)
     axp = ax.imshow(normed_graph, cmap='inferno')
     cb = plt.colorbar(axp, ax=[ax], location='right')
-    plt.title("Non-reach Weight Distribution")
+    plt.title("Reach Weight Distribution")
     plt.show()
 
 
@@ -536,7 +539,7 @@ def main():
     plt.plot(list(deg_z_scores.values()), list(deg_z_scores.items()), 'g-')
     plt.xlabel("Standardized Z-Score")
     plt.ylabel("Neuron Index")
-    plt.title("Non-reach Degree Centrality")
+    plt.title("Reach Degree Centrality")
     plt.show()
 
 
@@ -548,7 +551,7 @@ def main():
     plt.plot(deg_z_scores_to_plot[153:183], new[153:183], 'g-')
     plt.xlabel("Standardized Z-Score")
     plt.ylabel("Neuron Index")
-    plt.title("Non-reach Degree Centrality Top N")
+    plt.title("Reach Degree Centrality Top N")
     plt.yticks(fontsize=10)
     plt.show()
     '''
@@ -629,6 +632,13 @@ def main():
     print(spatial_coordinates)
 
     sorted_spatial_coordinates = {k: v for k, v in sorted(spatial_coordinates.items(), key=lambda item: item[1])}
+    print('sorted spatial coords')
+    print(sorted_spatial_coordinates)
+    print(np.array(list(sorted_spatial_coordinates.items())).shape)
+    print(list(sorted_spatial_coordinates.items())[len(sorted_spatial_coordinates) // 2:])
+
+
+
     superficial_neurons = dict(list(sorted_spatial_coordinates.items())[len(sorted_spatial_coordinates) // 2:])
     deep_neurons = dict(list(sorted_spatial_coordinates.items())[:len(sorted_spatial_coordinates) // 2])
 
@@ -644,31 +654,34 @@ def main():
     spikes_deep = np.take(spikes, deep_idx, 0)
     spikes_superficial = np.take(spikes, superficial_idx, 0)
 
+    print(deep_idx)
+
+
     print('deep shape')
     print(spikes_deep.shape)
     print('superficial shape')
     print(spikes_superficial.shape)
 
-    df = create_pandas_df_transpose(spikes_superficial)
+    df = create_pandas_df_transpose(spikes_deep)
     df = pd.DataFrame(subset_reaches(df.to_numpy(), reach_masks))
 
-    spikes_superficial = df.to_numpy()
+    spikes_deep = df.to_numpy()
 
     mu = np.mean(df.to_numpy())
     sigma = np.std(df.to_numpy())
     print(mu)
     print(sigma)
-    threshold = mu+sigma
+    threshold = .99
     print(threshold)
-    spikes_superficial[spikes_superficial >= threshold] = 1
-    spikes_superficial[spikes_superficial < threshold] = 0
+    spikes_deep[spikes_deep >= threshold] = 1
+    spikes_deep[spikes_deep < threshold] = 0
 
     print('how many zeros')
-    print(spikes_superficial[spikes_superficial==0].shape)
+    print(spikes_deep[spikes_deep==0].shape)
     print('how many ones')
-    print(spikes_superficial[spikes_superficial==1].shape)
+    print(spikes_deep[spikes_deep==1].shape)
 
-    graph_adjacency_matrix = create_graph(spikes_superficial)
+    graph_adjacency_matrix = create_graph(spikes_deep)
 
     background_graph = background(graph_adjacency_matrix)
     residual_graph = residual(background_graph, graph_adjacency_matrix)
@@ -680,14 +693,23 @@ def main():
     ax = fig.add_subplot(111)
     axp = ax.imshow(normed_graph, cmap='inferno')
     cb = plt.colorbar(axp, ax=[ax], location='right')
-    plt.title("Non-reach Superficial Neurons Weight Distribution")
+    plt.title("Non-reach Deep Neurons Weight Distribution")
     plt.show()
 
     deg = compute_graph_centrality(graph)
 
+    print('deg')
+    print(deg)
+
+    deg = dict(zip(deep_idx, list(deg.values())))
+
+    print('deg')
+    print(deg)
+
+
     pca = PCA(n_components=2)
 
-    principalComponents = pca.fit_transform(spikes_superficial) #spikes_superficial
+    principalComponents = pca.fit_transform(spikes_deep) #spikes_superficial
     print(principalComponents)
     print(principalComponents.shape)
     print(pca.explained_variance_ratio_)
@@ -715,7 +737,7 @@ def main():
     plt.plot(list(deg_z_scores.values()), list(deg_z_scores.items()), 'g-')
     plt.xlabel("Standardized Z-Score")
     plt.ylabel("Neuron Index")
-    plt.title("Non-reach Superficial Neurons Degree Centrality")
+    plt.title("Reach Deep Neurons Degree Centrality")
     plt.show()
 
     f = plt.figure()
@@ -725,7 +747,7 @@ def main():
     plt.plot(deg_z_scores_to_plot[72:92], new[72:92], 'g-')
     plt.xlabel("Standardized Z-Score")
     plt.ylabel("Neuron Index")
-    plt.title("Non-reach Superficial Neurons Degree Centrality Top N")
+    plt.title("Reach Deep Neurons Betweenness Centrality Top N")
     plt.yticks(fontsize=10)
     plt.show()
 
