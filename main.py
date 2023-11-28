@@ -318,7 +318,7 @@ def loop_throgh_non_reaches():
     print()
 
 def subset_reaches(data, masks):
-    return data[np.where(masks != 0)[0], :] ##!= gets all reaches
+    return data[np.where(masks != 1)[0], :] ##!= gets all reaches
 
 def subset_non_reaches(data, masks):
     return data[np.where(masks == 0)[0], :] ##!= gets all reaches
@@ -662,10 +662,10 @@ def main():
     print('superficial shape')
     print(spikes_superficial.shape)
 
-    df = create_pandas_df_transpose(spikes_deep)
+    df = create_pandas_df_transpose(spikes_superficial)
     df = pd.DataFrame(subset_reaches(df.to_numpy(), reach_masks))
 
-    spikes_deep = df.to_numpy()
+    spikes_superficial = df.to_numpy()
 
     mu = np.mean(df.to_numpy())
     sigma = np.std(df.to_numpy())
@@ -673,15 +673,32 @@ def main():
     print(sigma)
     threshold = .99
     print(threshold)
-    spikes_deep[spikes_deep >= threshold] = 1
-    spikes_deep[spikes_deep < threshold] = 0
+    spikes_superficial[spikes_superficial >= threshold] = 1
+    spikes_superficial[spikes_superficial < threshold] = 0
 
     print('how many zeros')
-    print(spikes_deep[spikes_deep==0].shape)
+    print(spikes_superficial[spikes_superficial==0].shape)
     print('how many ones')
-    print(spikes_deep[spikes_deep==1].shape)
+    print(spikes_superficial[spikes_superficial==1].shape)
 
-    graph_adjacency_matrix = create_graph(spikes_deep)
+    '''
+    deep -
+    
+    how many zeros
+    (5360525,)
+    how many ones
+    (298395,)
+    '''
+
+    '''
+    superficial -
+    how many zeros
+    (5387495,)
+    how many ones
+    (271425,)
+    '''
+
+    graph_adjacency_matrix = create_graph(spikes_superficial)
 
     background_graph = background(graph_adjacency_matrix)
     residual_graph = residual(background_graph, graph_adjacency_matrix)
@@ -701,7 +718,7 @@ def main():
     print('deg')
     print(deg)
 
-    deg = dict(zip(deep_idx, list(deg.values())))
+    deg = dict(zip(superficial_idx, list(deg.values())))
 
     print('deg')
     print(deg)
@@ -709,7 +726,7 @@ def main():
 
     pca = PCA(n_components=2)
 
-    principalComponents = pca.fit_transform(spikes_deep) #spikes_superficial
+    principalComponents = pca.fit_transform(spikes_superficial) #spikes_superficial
     print(principalComponents)
     print(principalComponents.shape)
     print(pca.explained_variance_ratio_)
@@ -747,7 +764,7 @@ def main():
     plt.plot(deg_z_scores_to_plot[72:92], new[72:92], 'g-')
     plt.xlabel("Standardized Z-Score")
     plt.ylabel("Neuron Index")
-    plt.title("Reach Deep Neurons Betweenness Centrality Top N")
+    plt.title("Non-reach Superficial Neurons Betweenness Centrality Top N")
     plt.yticks(fontsize=10)
     plt.show()
 
