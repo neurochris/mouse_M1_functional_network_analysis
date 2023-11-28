@@ -140,7 +140,35 @@ def compute_graph_centrality(graph):
     #plt.title("Page Rank")
     #plt.show()
 
-    return bet_centrality
+    return deg_centrality
+
+
+def plot_edge_dist(G):
+    edge_weights = []
+
+    for u, v, w in G.edges(data=True):
+        edge_weights.append(float(w['weight']))
+
+    # plt.hist(degrees)
+    # plt.show()
+    n, bins, patches = plt.hist(edge_weights, bins=40, facecolor='#2ab0ff', edgecolor='#e0e0e0', linewidth=0.8, alpha=0.9)
+
+    n = n.astype('int')  # it MUST be integer# Good old loop. Choose colormap of your taste
+    for i in range(len(patches)):
+        patches[i].set_facecolor(cmap(n[i] / max(n)))  # Make one bin stand out
+
+    # plt.axvline(edge_weights.mean(), color='k', linestyle='dashed', linewidth=1)
+
+    patches[4].set_fc('red')  # Set color
+    patches[4].set_alpha(1)  # Set opacity# Add annotation
+    plt.annotate('Important Bar!', xy=(0.57, 175), xytext=(2, 130), fontsize=15,
+                 arrowprops={'width': 0.4, 'headwidth': 7,
+                             'color': '#333333'})  # Add title and labels with custom font sizes
+
+    plt.title('Non-reach Deep Neurons Degree Distribution', fontsize=12)
+    plt.xlabel('Bins', fontsize=10)
+    plt.ylabel('Values', fontsize=10)
+    plt.show()
 
 
 def plot_degree_dist(G):
@@ -153,13 +181,15 @@ def plot_degree_dist(G):
     n = n.astype('int')  # it MUST be integer# Good old loop. Choose colormap of your taste
     for i in range(len(patches)):
         patches[i].set_facecolor(cmap(n[i] / max(n)))  # Make one bin stand out
-    '''
-    patches[47].set_fc('red')  # Set color
-    patches[47].set_alpha(1)  # Set opacity# Add annotation
+
+    #plt.axvline(degrees.mean(), color='k', linestyle='dashed', linewidth=1)
+
+    patches[4].set_fc('red')  # Set color
+    patches[4].set_alpha(1)  # Set opacity# Add annotation
     plt.annotate('Important Bar!', xy=(0.57, 175), xytext=(2, 130), fontsize=15,
                  arrowprops={'width': 0.4, 'headwidth': 7,
                              'color': '#333333'})  # Add title and labels with custom font sizes
-    '''
+
     plt.title('Non-reach Deep Neurons Degree Distribution', fontsize=12)
     plt.xlabel('Bins', fontsize=10)
     plt.ylabel('Values', fontsize=10)
@@ -318,7 +348,7 @@ def loop_throgh_non_reaches():
     print()
 
 def subset_reaches(data, masks):
-    return data[np.where(masks != 1)[0], :] ##!= gets all reaches
+    return data[np.where(masks != 0)[0], :] ##!= gets all reaches
 
 def subset_non_reaches(data, masks):
     return data[np.where(masks == 0)[0], :] ##!= gets all reaches
@@ -663,7 +693,7 @@ def main():
     print(spikes_superficial.shape)
 
     df = create_pandas_df_transpose(spikes_superficial)
-    df = pd.DataFrame(subset_reaches(df.to_numpy(), reach_masks))
+    #df = pd.DataFrame(subset_reaches(df.to_numpy(), reach_masks))
 
     spikes_superficial = df.to_numpy()
 
@@ -733,6 +763,7 @@ def main():
     plt.scatter(principalComponents[:, 0], principalComponents[:, 1])
     plt.show()
     plot_degree_dist(graph)
+    plot_edge_dist(graph)
 
     deg_z_scores = zify_scipy(deg)
     print(deg_z_scores)
@@ -764,7 +795,7 @@ def main():
     plt.plot(deg_z_scores_to_plot[72:92], new[72:92], 'g-')
     plt.xlabel("Standardized Z-Score")
     plt.ylabel("Neuron Index")
-    plt.title("Non-reach Superficial Neurons Betweenness Centrality Top N")
+    plt.title("Reach Superficial Neurons Degree Centrality Top N")
     plt.yticks(fontsize=10)
     plt.show()
 
