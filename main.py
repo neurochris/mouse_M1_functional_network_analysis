@@ -151,21 +151,24 @@ def plot_edge_dist(G):
 
     # plt.hist(degrees)
     # plt.show()
-    n, bins, patches = plt.hist(edge_weights, bins=40, facecolor='#2ab0ff', edgecolor='#e0e0e0', linewidth=0.8, alpha=0.9)
+    n, bins, patches = plt.hist(edge_weights, bins=20, facecolor='#2ab0ff', edgecolor='#e0e0e0', linewidth=0.8, alpha=0.9)
 
     n = n.astype('int')  # it MUST be integer# Good old loop. Choose colormap of your taste
     for i in range(len(patches)):
         patches[i].set_facecolor(cmap(n[i] / max(n)))  # Make one bin stand out
 
-    # plt.axvline(edge_weights.mean(), color='k', linestyle='dashed', linewidth=1)
+    print('mean: ')
+    print(np.array(edge_weights).mean())
 
-    patches[4].set_fc('red')  # Set color
-    patches[4].set_alpha(1)  # Set opacity# Add annotation
-    plt.annotate('Important Bar!', xy=(0.57, 175), xytext=(2, 130), fontsize=15,
-                 arrowprops={'width': 0.4, 'headwidth': 7,
-                             'color': '#333333'})  # Add title and labels with custom font sizes
+    plt.axvline(np.array(edge_weights).mean(), color='k', linestyle='dashed', linewidth=1)
 
-    plt.title('Non-reach Deep Neurons Degree Distribution', fontsize=12)
+    #patches[4].set_fc('red')  # Set color
+    #patches[4].set_alpha(1)  # Set opacity# Add annotation
+    #plt.annotate('Important Bar!', xy=(0.57, 175), xytext=(2, 130), fontsize=15,
+    #             arrowprops={'width': 0.4, 'headwidth': 7,
+    #                         'color': '#333333'})  # Add title and labels with custom font sizes
+
+    plt.title('Non-reach Deep Neurons Edge Distribution', fontsize=12)
     plt.xlabel('Bins', fontsize=10)
     plt.ylabel('Values', fontsize=10)
     plt.show()
@@ -348,12 +351,15 @@ def loop_throgh_non_reaches():
     print()
 
 def subset_reaches(data, masks):
-    return data[np.where(masks != 0)[0], :] ##!= gets all reaches
+    return data[np.where(masks != 1)[0], :] ##!= gets all reaches
 
 def subset_non_reaches(data, masks):
     return data[np.where(masks == 0)[0], :] ##!= gets all reaches
 
+'''
+0.010869565217391353
 
+'''
 
 def subset_reaches_by_frame_start_and_end(data, start_and_end):
     res_list = []
@@ -692,10 +698,10 @@ def main():
     print('superficial shape')
     print(spikes_superficial.shape)
 
-    df = create_pandas_df_transpose(spikes_superficial)
-    #df = pd.DataFrame(subset_reaches(df.to_numpy(), reach_masks))
+    df = create_pandas_df_transpose(spikes_deep)
+    df = pd.DataFrame(subset_reaches(df.to_numpy(), reach_masks))
 
-    spikes_superficial = df.to_numpy()
+    spikes_deep = df.to_numpy()
 
     mu = np.mean(df.to_numpy())
     sigma = np.std(df.to_numpy())
@@ -703,8 +709,8 @@ def main():
     print(sigma)
     threshold = .99
     print(threshold)
-    spikes_superficial[spikes_superficial >= threshold] = 1
-    spikes_superficial[spikes_superficial < threshold] = 0
+    spikes_deep[spikes_deep >= threshold] = 1
+    spikes_deep[spikes_deep < threshold] = 0
 
     print('how many zeros')
     print(spikes_superficial[spikes_superficial==0].shape)
@@ -728,7 +734,12 @@ def main():
     (271425,)
     '''
 
-    graph_adjacency_matrix = create_graph(spikes_superficial)
+    graph_adjacency_matrix = create_graph(spikes_deep)
+
+    sparsity = 1.0 - (np.count_nonzero(graph_adjacency_matrix) / float(graph_adjacency_matrix.size))
+    print('sparsity: ')
+    print(sparsity)
+    print('*************************************************************************')
 
     background_graph = background(graph_adjacency_matrix)
     residual_graph = residual(background_graph, graph_adjacency_matrix)
@@ -748,7 +759,7 @@ def main():
     print('deg')
     print(deg)
 
-    deg = dict(zip(superficial_idx, list(deg.values())))
+    deg = dict(zip(deep_idx, list(deg.values())))
 
     print('deg')
     print(deg)
@@ -756,7 +767,7 @@ def main():
 
     pca = PCA(n_components=2)
 
-    principalComponents = pca.fit_transform(spikes_superficial) #spikes_superficial
+    principalComponents = pca.fit_transform(spikes_deep) #spikes_superficial
     print(principalComponents)
     print(principalComponents.shape)
     print(pca.explained_variance_ratio_)
