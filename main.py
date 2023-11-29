@@ -351,14 +351,21 @@ def loop_throgh_non_reaches():
     print()
 
 def subset_reaches(data, masks):
-    return data[np.where(masks != 1)[0], :] ##!= gets all reaches
+    return data[np.where(masks != 0)[0], :] ##!= gets all reaches
 
 def subset_non_reaches(data, masks):
     return data[np.where(masks == 0)[0], :] ##!= gets all reaches
 
 '''
-0.010869565217391353
-
+0.010869565217391353 - D-NR
+0.06935255198487711 - D-R
+0.010869565217391353 - D-FS
+0.010869565217391353 - S-FS
+0.07974952741020791 - S-R
+0.010869565217391353 - S-NR
+0.010869565217391353 - FS
+0.010869565217391353 - NR
+0.09085538752362954 - R
 '''
 
 def subset_reaches_by_frame_start_and_end(data, start_and_end):
@@ -698,10 +705,10 @@ def main():
     print('superficial shape')
     print(spikes_superficial.shape)
 
-    df = create_pandas_df_transpose(spikes_deep)
+    df = create_pandas_df_transpose(spikes)
     df = pd.DataFrame(subset_reaches(df.to_numpy(), reach_masks))
 
-    spikes_deep = df.to_numpy()
+    spikes_superficial = df.to_numpy()
 
     mu = np.mean(df.to_numpy())
     sigma = np.std(df.to_numpy())
@@ -709,8 +716,8 @@ def main():
     print(sigma)
     threshold = .99
     print(threshold)
-    spikes_deep[spikes_deep >= threshold] = 1
-    spikes_deep[spikes_deep < threshold] = 0
+    spikes_superficial[spikes_superficial >= threshold] = 1
+    spikes_superficial[spikes_superficial < threshold] = 0
 
     print('how many zeros')
     print(spikes_superficial[spikes_superficial==0].shape)
@@ -734,7 +741,7 @@ def main():
     (271425,)
     '''
 
-    graph_adjacency_matrix = create_graph(spikes_deep)
+    graph_adjacency_matrix = create_graph(spikes_superficial)
 
     sparsity = 1.0 - (np.count_nonzero(graph_adjacency_matrix) / float(graph_adjacency_matrix.size))
     print('sparsity: ')
@@ -759,7 +766,7 @@ def main():
     print('deg')
     print(deg)
 
-    deg = dict(zip(deep_idx, list(deg.values())))
+    deg = dict(zip(superficial_idx, list(deg.values())))
 
     print('deg')
     print(deg)
@@ -767,7 +774,7 @@ def main():
 
     pca = PCA(n_components=2)
 
-    principalComponents = pca.fit_transform(spikes_deep) #spikes_superficial
+    principalComponents = pca.fit_transform(spikes_superficial) #spikes_superficial
     print(principalComponents)
     print(principalComponents.shape)
     print(pca.explained_variance_ratio_)
