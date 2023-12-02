@@ -128,7 +128,7 @@ def compute_graph_centrality(graph):
     plt.title("Close Centrality" )
     plt.show()
 
-    bet_centrality = nx.betweenness_centrality(graph, normalized=True, endpoints=False)
+    bet_centrality = nx.betweenness_centrality(graph, normalized=False, endpoints=False)
 
     plt.plot(*zip(*sorted(bet_centrality.items())))
     plt.title("Between Centrality")
@@ -140,7 +140,7 @@ def compute_graph_centrality(graph):
     #plt.title("Page Rank")
     #plt.show()
 
-    return deg_centrality
+    return bet_centrality
 
 
 def plot_edge_dist(G):
@@ -193,7 +193,7 @@ def plot_degree_dist(G):
                  arrowprops={'width': 0.4, 'headwidth': 7,
                              'color': '#333333'})  # Add title and labels with custom font sizes
 
-    plt.title('Non-reach Deep Neurons Degree Distribution', fontsize=12)
+    plt.title('S-D Full Session Degree Distribution', fontsize=12)
     plt.xlabel('Bins', fontsize=10)
     plt.ylabel('Values', fontsize=10)
     plt.show()
@@ -366,6 +366,8 @@ def subset_non_reaches(data, masks):
 0.010869565217391353 - FS
 0.010869565217391353 - NR
 0.09085538752362954 - R
+
+0.7977020321361059 - S-D Full
 '''
 
 def subset_reaches_by_frame_start_and_end(data, start_and_end):
@@ -543,6 +545,7 @@ def main():
 
     df = create_pandas_df_transpose(spikes)
 
+    df = pd.DataFrame(subset_reaches(df.to_numpy(), reach_masks))
 
     print('spikes: ')
     print(spikes.shape)
@@ -595,28 +598,26 @@ def main():
 
     graph = show_graph_with_labels(normed_graph)
 
-    for u,v,a in graph.edges(data=True):
+    edgelist = list(graph.edges(data=True))
+
+    for u,v,a in edgelist:
         ##if connect between super/deep keep otherwise remove edge between u and v
         if (u in deep_idx and v in superficial_idx) or (u in deep_idx and v in superficial_idx):
             print("Found deep-superficial edge")
         else:
             graph.remove_edge(u, v)
 
+    graph.remove_nodes_from(list(nx.isolates(graph)))
 
-    deg = compute_graph_centrality(graph)
+
     compute_umap(normed_graph)
 
     pca = PCA(n_components=2)
 
-    principalComponents = pca.fit_transform(graph_adjacency_matrix)
-    print(principalComponents)
-    print(principalComponents.shape)
-    print(pca.explained_variance_ratio_)
-    plt.scatter(principalComponents[:, 0], principalComponents[:, 1])
-    plt.show()
-    plot_degree_dist(graph)
 
 
+
+    deg = compute_graph_centrality(graph)
 
     deg_z_scores = zify_scipy(deg)
     print(deg_z_scores)
@@ -635,29 +636,42 @@ def main():
     for j in neuron_idx:
         new.append(str(j))
 
-    plt.plot(list(deg_z_scores.values()), list(deg_z_scores.items()), 'g-')
-    plt.xlabel("Standardized Z-Score")
-    plt.ylabel("Neuron Index")
-    plt.title("Reach Degree Centrality")
-    plt.show()
-
-
     f = plt.figure()
     f.set_figwidth(5)
     f.set_figheight(7)
 
-
     plt.plot(deg_z_scores_to_plot[153:183], new[153:183], 'g-')
     plt.xlabel("Standardized Z-Score")
     plt.ylabel("Neuron Index")
-    plt.title("Reach Degree Centrality Top N")
+    plt.title("S-D Full Session Betweenness Centrality Top N")
     plt.yticks(fontsize=10)
     plt.show()
 
 
 
 
+    adj_matrix = nx.adjacency_matrix(graph).toarray()
 
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    axp = ax.imshow(adj_matrix, cmap='inferno')
+    cb = plt.colorbar(axp, ax=[ax], location='right')
+    plt.title("S-D Full Session Weight Distribution")
+    plt.show()
+
+
+    principalComponents = pca.fit_transform(adj_matrix)
+    print(principalComponents)
+    print(principalComponents.shape)
+    print(pca.explained_variance_ratio_)
+    plt.scatter(principalComponents[:, 0], principalComponents[:, 1])
+    plt.show()
+    plot_degree_dist(graph)
+
+    sparsity = 1.0 - (np.count_nonzero(adj_matrix) / float(adj_matrix.size))
+    print('sparsity: ')
+    print(sparsity)
+    print('*************************************************************************')
 
     '''
 
