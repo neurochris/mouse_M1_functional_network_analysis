@@ -101,10 +101,10 @@ def compute_conmi(vec1, vec2):
 def create_graph(data):
 
     data = np.array(data)
-    graph = np.zeros((92, 92))
+    graph = np.zeros((184, 184))
 
-    for i in range(92):
-        for j in range(92):
+    for i in range(184):
+        for j in range(184):
             graph[i][j] = compute_conmi(data[:, i], data[:, j])
 
     graph[np.isnan(graph)] = 0
@@ -487,13 +487,65 @@ def main():
 
     spikes = np.array(data_dict_second_level['S'])
 
+
+
+    spatial_coordinates = dict()
+    plt.imshow(spatial_data_second_level[100, :, :])
+    plt.show()
+
+    img = spatial_data_second_level[100, :, :].reshape((198, 318, 1))
+    print(img.shape)
+
+    for idx, im in enumerate(spatial_data_second_level):
+        img = im.reshape((198, 318, 1))
+        # convert the image to grayscale
+        gray_image = np.uint8(img * 255)
+
+        # convert the grayscale image to binary image
+        ret, thresh = cv2.threshold(gray_image, 127, 255, 0)
+
+        # find contours in the binary image
+        im2, contours = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        for c in im2:
+            # calculate moments for each contour
+            M = cv2.moments(c)
+
+            # calculate x,y coordinate of center
+            cX = int(M["m10"] / M["m00"])
+            cY = int(M["m01"] / M["m00"])
+            print(cX)
+            print(cY)
+            spatial_coordinates[idx] = cY
+
+    print(spatial_coordinates)
+
+    sorted_spatial_coordinates = {k: v for k, v in sorted(spatial_coordinates.items(), key=lambda item: item[1])}
+    print('sorted spatial coords')
+    print(sorted_spatial_coordinates)
+    print(np.array(list(sorted_spatial_coordinates.items())).shape)
+    print(list(sorted_spatial_coordinates.items())[len(sorted_spatial_coordinates) // 2:])
+
+
+
+    superficial_neurons = dict(list(sorted_spatial_coordinates.items())[len(sorted_spatial_coordinates) // 2:])
+    deep_neurons = dict(list(sorted_spatial_coordinates.items())[:len(sorted_spatial_coordinates) // 2])
+
+    print('------------------------------------------------------------------')
+    print(superficial_neurons)
+    print('deep')
+    print(deep_neurons)
+    print('------------------------------------------------------------------')
+
+    deep_idx = list(deep_neurons.keys())
+    superficial_idx = list(superficial_neurons.keys())
+
+
+
     df = create_pandas_df_transpose(spikes)
 
 
     print('spikes: ')
     print(spikes.shape)
-
-    '''
 
 
     print(df)
@@ -508,7 +560,7 @@ def main():
 
     mu = np.mean(df.to_numpy())
     sigma = np.std(df.to_numpy())
-    threshold = .99
+    threshold = mu+sigma
     print(threshold)
     spikes[spikes >= threshold] = 1
     spikes[spikes < threshold] = 0
@@ -542,6 +594,72 @@ def main():
 
 
     graph = show_graph_with_labels(normed_graph)
+
+    for u,v,a in graph.edges(data=True):
+        ##if connect between super/deep keep otherwise remove edge between u and v
+        if (u in deep_idx and v in superficial_idx) or (u in deep_idx and v in superficial_idx):
+            print("Found deep-superficial edge")
+        else:
+            graph.remove_edge(u, v)
+
+
+    deg = compute_graph_centrality(graph)
+    compute_umap(normed_graph)
+
+    pca = PCA(n_components=2)
+
+    principalComponents = pca.fit_transform(graph_adjacency_matrix)
+    print(principalComponents)
+    print(principalComponents.shape)
+    print(pca.explained_variance_ratio_)
+    plt.scatter(principalComponents[:, 0], principalComponents[:, 1])
+    plt.show()
+    plot_degree_dist(graph)
+
+
+
+    deg_z_scores = zify_scipy(deg)
+    print(deg_z_scores)
+    deg_z_scores_sorted = dict(sorted(deg_z_scores.items(), key=lambda x: x[1]))
+
+    neuron_idx = list(deg_z_scores_sorted.keys())  # list() needed for python 3.x
+    deg_z_scores_to_plot = list(deg_z_scores_sorted.values())
+    print(neuron_idx)
+    print(deg_z_scores)
+    # plotting a line plot after changing it's width and height
+    f = plt.figure()
+    f.set_figwidth(5)
+    f.set_figheight(7)
+
+    new = []
+    for j in neuron_idx:
+        new.append(str(j))
+
+    plt.plot(list(deg_z_scores.values()), list(deg_z_scores.items()), 'g-')
+    plt.xlabel("Standardized Z-Score")
+    plt.ylabel("Neuron Index")
+    plt.title("Reach Degree Centrality")
+    plt.show()
+
+
+    f = plt.figure()
+    f.set_figwidth(5)
+    f.set_figheight(7)
+
+
+    plt.plot(deg_z_scores_to_plot[153:183], new[153:183], 'g-')
+    plt.xlabel("Standardized Z-Score")
+    plt.ylabel("Neuron Index")
+    plt.title("Reach Degree Centrality Top N")
+    plt.yticks(fontsize=10)
+    plt.show()
+
+
+
+
+
+
+    '''
 
 
     #np.save("/home/macleanlab/Desktop/chris_data_out/numpy/normed_graph.npy", normed_graph)
@@ -597,7 +715,6 @@ def main():
     plt.title("Reach Degree Centrality Top N")
     plt.yticks(fontsize=10)
     plt.show()
-    '''
 
 
 
@@ -724,22 +841,20 @@ def main():
     print('how many ones')
     print(spikes_superficial[spikes_superficial==1].shape)
 
-    '''
-    deep -
     
-    how many zeros
-    (5360525,)
-    how many ones
-    (298395,)
-    '''
-
-    '''
-    superficial -
-    how many zeros
-    (5387495,)
-    how many ones
-    (271425,)
-    '''
+    #deep -
+    
+    #how many zeros
+    #(5360525,)
+    #how many ones
+    #(298395,)
+    
+    #superficial -
+    #how many zeros
+    #(5387495,)
+    #how many ones
+    #(271425,)
+    
 
     graph_adjacency_matrix = create_graph(spikes_superficial)
 
@@ -855,7 +970,7 @@ def main():
     #graph = show_graph_with_labels(normed_graph)
     #find_subgraph(graph)
 
-    '''
+    
     unit_analyzer.set_graph(graph)
     unit_analyzer.compute_top_central_units()
     print(graph)
@@ -914,6 +1029,7 @@ def main():
 
 
     #analyze_subgraphs(graph)
+    
 
     '''
 
