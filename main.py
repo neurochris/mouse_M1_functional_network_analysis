@@ -146,7 +146,7 @@ def plot_edge_dist(G):
 
     print(np.mean(edge_weights))
 
-    plt.title('Superficial Neurons Edge Distribution', fontsize=12)
+    plt.title('Deep Neurons Edge Distribution', fontsize=12)
     plt.xlabel('Bins', fontsize=10)
     plt.ylabel('Values', fontsize=10)
     plt.show()
@@ -460,7 +460,7 @@ def main():
     spikes_deep = np.take(spikes, deep_idx, 0)
     spikes_superficial = np.take(spikes, superficial_idx, 0)
 
-    df = create_pandas_df_transpose(spikes_superficial)
+    df = create_pandas_df_transpose(spikes_deep)
 
     spikes_superficial = df.to_numpy()
 
